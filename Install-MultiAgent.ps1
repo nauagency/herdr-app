@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Script: Install-MultiAgent.ps1
 # Mục đích: Cài đặt và cấu hình 1-click trọn gói hệ thống Multi Agent (6 tài khoản)
 #          trên Windows kèm icon Desktop và plugin Herdr.
@@ -11,7 +11,7 @@ $ErrorActionPreference = "Continue"
 
 Write-Host ""
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "     HỆ THỐNG MULTI AGENT (6 TÀI KHOẢN) CHO WINDOWS       " -ForegroundColor Yellow
+Write-Host "     HỆ THỐNG MULTI AGENT HERDR (6 TÀI KHOẢN) CHO WINDOWS       " -ForegroundColor Yellow
 Write-Host "                Phát triển bởi Nauagency                  " -ForegroundColor DarkGray
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
@@ -78,7 +78,7 @@ for ($i = 1; $i -le 6; $i++) {
     $psContent = "`$env:HOME = '$accDir'`r`n& agy @args"
     Set-Content -Path "$binDir\agy-$i.ps1" -Value $psContent -Encoding UTF8
 
-    Write-Host "  -> Da tao profile tai khoan $i: $accDir (Lenh: agy-$i)" -ForegroundColor Green
+    Write-Host "  -> Da tao profile tai khoan ${i}: $accDir (Lenh: agy-$i)" -ForegroundColor Green
 }
 
 # Thêm binDir vào PATH của User nếu chưa có
@@ -154,7 +154,7 @@ Write-Host ""
 Write-Host "[3/5] Tao Shortcut 'Multi Agent' tren Desktop..." -ForegroundColor Cyan
 
 $desktop = [Environment]::GetFolderPath("Desktop")
-$shortcutFile = Join-Path $desktop "Multi Agent.lnk"
+$shortcutFile = Join-Path $desktop "Multi Agent Herdr.lnk"
 
 # Xác định file exe để tạo shortcut
 $targetExe = $herdrExe
@@ -235,7 +235,7 @@ Write-Host "  -> Da thiet lap cau hinh san cho plugin herdr-paste-image!" -Foreg
 # ------------------------------------------------------------------------------
 Write-Host ""
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "          CAI DAT MULTI AGENT HOAN TAT 100%!              " -ForegroundColor Green
+Write-Host "          CAI DAT MULTI AGENT HERDR HOAN TAT 100%!              " -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Cac tien ich da duoc thiet lap:" -ForegroundColor Yellow
@@ -247,3 +247,4 @@ Write-Host "5. Plugin Dan anh: ho tro chup anh man hinh dan thang vao cua so Age
 Write-Host ""
 Write-Host "De bat dau, hay click dup vao bieu tuong 'Multi Agent' tren Desktop hoac chay Start-MultiAgent.bat!" -ForegroundColor Cyan
 Write-Host ""
+

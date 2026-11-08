@@ -1,4 +1,4 @@
-# HƯỚNG DẪN THIẾT LẬP MULTI AGENT TRÊN PC WINDOWS
+﻿# HƯỚNG DẪN THIẾT LẬP MULTI AGENT TRÊN PC WINDOWS
 
 > ⚡ **CÀI ĐẶT 1-CLICK TỰ ĐỘNG (KHUYÊN DÙNG):**  
 > **Bên Windows chỉ cần tải repo về và click đúp vào file `cai_dat_multi_agent_windows.bat` là xong toàn bộ từ A đến Z!**
@@ -12,10 +12,10 @@ Khi bạn click đúp vào file **`cai_dat_multi_agent_windows.bat`**, hệ th�
 1. **Cài đặt Herdr:** Tự động kiểm tra và tải/cài đặt Herdr chính thức phiên bản mới nhất cho Windows nếu máy chưa có.
 2. **Cấu hình 6 tài khoản độc lập:** Tự động tạo 6 môi trường riêng biệt (`agy-1` đến `agy-6`) tại `%USERPROFILE%\.antigravity-accounts\acc1..6`, không bao giờ bị đụng token hay đăng xuất lẫn nhau.
 3. **Kích hoạt quy tắc Zero-Bloat:** Nạp quy tắc `GEMINI.md` vào cả 6 tài khoản để tiết kiệm >90% token ngữ cảnh qua mô hình Orchestrator & Subagent Flash.
-4. **Tạo Shortcut Desktop "Multi Agent":** Tự động tạo biểu tượng ngoài màn hình Desktop với tên **Multi Agent** và icon logo Nauagency chuẩn Windows (`multi_agent_logo.ico`).
+4. **Tạo Shortcut Desktop "Multi Agent Herdr":** Tự động tạo biểu tượng ngoài màn hình Desktop với tên **Multi Agent Herdr** và icon logo Nauagency chuẩn Windows (`multi_agent_logo.ico`).
 5. **Cài đặt Plugin Paste Ảnh:** Tự động cấu hình plugin `herdr-paste-image` giúp bạn chụp ảnh màn hình bằng Clipboard rồi dán trực tiếp vào Agent.
 6. **Thêm lệnh vào PATH:** Có thể mở bất kỳ Terminal, CMD hoặc PowerShell nào gõ `agy-1` đến `agy-6` là chạy ngay.
-7. **Khởi động nhanh:** Cung cấp sẵn file **`Start-MultiAgent.bat`** để click đúp là mở Multi Agent bất cứ khi nào.
+7. **Khởi động nhanh:** Cung cấp sẵn file **`Start-MultiAgent.bat`** để click đúp là mở Multi Agent Herdr bất cứ khi nào.
 
 ---
 
@@ -59,9 +59,11 @@ New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server' 
 
 ---
 
-### BƯỚC 4: Kết nối từ MacBook sang PC Windows qua Multi Agent
+### BƯỚC 4: Kết nối từ MacBook sang PC Windows qua Multi Agent Herdr
 1. **Lấy thông tin PC:**
    - Click icon Tailscale trên Windows để xem IP dạng: `100.x.y.z` (Ví dụ: `100.85.120.45`).
    - Mở CMD trên Windows, gõ `whoami` để xem tên tài khoản Windows (ví dụ: `hoangdam` hoặc `PC\hoangdam`).
-2. **Thêm máy vào Multi Agent trên MacBook:**
-   - Mở **Multi Agent** trên Mac ➔ Chọn **Add a machine** ➔ Điền IP `100.x.y.z` và Username của PC vào là hoàn tất!
+2. **Thêm máy vào Multi Agent Herdr trên MacBook:**
+   - Mở **Multi Agent Herdr** trên Mac ➔ Chọn **Add a machine** ➔ Điền IP `100.x.y.z` và Username của PC vào là hoàn tất!
+
+

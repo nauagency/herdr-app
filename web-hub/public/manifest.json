@@ -1,7 +1,7 @@
-{
-  "name": "Multi Agent - Nauagency",
-  "short_name": "MultiAgent",
-  "description": "Multi Agent Mobile Control Hub by Nauagency",
+﻿{
+  "name": "Multi Agent Herdr - Nauagency",
+  "short_name": "MultiAgentHerdr",
+  "description": "Multi Agent Herdr Mobile Control Hub by Nauagency",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -25,3 +25,5 @@
     }
   ]
 }
+
+

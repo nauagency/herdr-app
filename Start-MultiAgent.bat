@@ -1,6 +1,6 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
-title Khoi dong Multi Agent - Nauagency
+title Khoi dong Multi Agent Herdr - Nauagency
 
 set "HERDR_EXE=%LOCALAPPDATA%\Programs\herdr-app\herdr-app.exe"
 if exist "%HERDR_EXE%" (
@@ -31,3 +31,4 @@ echo Dang khoi dong trinh cai dat tu dong 'cai_dat_multi_agent_windows.bat'...
 echo.
 pause
 call "%~dp0cai_dat_multi_agent_windows.bat"
+

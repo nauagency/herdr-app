@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 set -e
 
 echo "Setting up agy-1 to agy-6 with Zero-Bloat Rule..."
@@ -27,3 +27,5 @@ SCRIPT
 done
 
 echo "Done! All 6 accounts now share the Zero-Bloat Token Saver rule."
+
+

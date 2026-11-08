@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" shape-rendering="crispEdges">
+  <!-- Window Background (Warm Ink Canvas) -->
+  <rect width="320" height="200" fill="#171311"/>
+
+  <!-- Sidebar (Warm Ink Chrome) -->
+  <rect x="0" y="0" width="76" height="200" fill="#1a1513"/>
+  <rect x="76" y="0" width="1" height="200" fill="#362c27"/>
+
+  <!-- macOS Traffic Lights / Window Controls room -->
+  <circle cx="10" cy="10" r="3" fill="#e06c60"/>
+  <circle cx="18" cy="10" r="3" fill="#e5aa60"/>
+  <circle cx="26" cy="10" r="3" fill="#87b972"/>
+
+  <!-- Brand Block (Header) -->
+  <rect x="8" y="20" width="10" height="10" rx="2" fill="#b98c73"/>
+  <rect x="22" y="21" width="34" height="4" rx="1" fill="#ede6df"/>
+  <rect x="22" y="27" width="22" height="3" rx="1" fill="#b98c73"/>
+
+  <!-- Sidebar Lists (Spaces & Agents) -->
+  <rect x="8" y="38" width="60" height="1" fill="#362c27"/>
+  <rect x="8" y="44" width="28" height="3" rx="1" fill="#73655c"/>
+  <rect x="8" y="52" width="54" height="5" rx="1" fill="#28211e"/>
+  <rect x="8" y="60" width="48" height="5" rx="1" fill="#1a1513"/>
+
+  <rect x="8" y="74" width="24" height="3" rx="1" fill="#73655c"/>
+  <rect x="8" y="82" width="56" height="5" rx="1" fill="#28211e"/>
+  <rect x="8" y="90" width="50" height="5" rx="1" fill="#1a1513"/>
+  <rect x="8" y="98" width="52" height="5" rx="1" fill="#1a1513"/>
+
+  <!-- Sidebar Footer -->
+  <rect x="0" y="180" width="76" height="20" fill="#1a1513"/>
+  <rect x="0" y="180" width="76" height="1" fill="#362c27"/>
+  <rect x="8" y="187" width="6" height="6" rx="1" fill="#73655c"/>
+  <rect x="18" y="188" width="24" height="4" rx="1" fill="#a39288"/>
+
+  <!-- Work Area -->
+  <!-- Tab Bar -->
+  <rect x="77" y="0" width="243" height="24" fill="#1a1513"/>
+  <rect x="77" y="24" width="243" height="1" fill="#362c27"/>
+
+  <!-- Active Tab Pill -->
+  <rect x="83" y="4" width="68" height="16" rx="4" fill="#28211e" stroke="#362c27" stroke-width="0.5"/>
+  <rect x="89" y="9" width="6" height="6" rx="1" fill="#b98c73"/>
+  <rect x="99" y="10" width="36" height="4" rx="1" fill="#ede6df"/>
+
+  <!-- Inactive Tab Pill -->
+  <rect x="155" y="4" width="56" height="16" rx="4" fill="#1a1513"/>
+  <rect x="165" y="10" width="32" height="4" rx="1" fill="#73655c"/>
+
+  <!-- New Tab (+) Button -->
+  <rect x="215" y="4" width="16" height="16" rx="4" fill="#1a1513"/>
+  <path d="M223 9v6M220 12h6" stroke="#73655c" stroke-width="1"/>
+
+  <!-- Work Body (Terminal Card) -->
+  <rect x="83" y="30" width="231" height="144" rx="6" fill="#171311" stroke="#b98c73" stroke-width="1"/>
+  <!-- Card Header -->
+  <rect x="84" y="31" width="229" height="16" rx="5" fill="#1e1816"/>
+  <rect x="90" y="37" width="36" height="4" rx="1" fill="#a39288"/>
+  <rect x="296" y="36" width="6" height="6" rx="1" fill="#73655c"/>
+
+  <!-- Terminal Content Lines -->
+  <rect x="92" y="55" width="48" height="3" rx="1" fill="#b98c73"/>
+  <rect x="92" y="63" width="120" height="3" rx="1" fill="#ede6df"/>
+  <rect x="92" y="71" width="90" height="3" rx="1" fill="#a39288"/>
+  <rect x="92" y="79" width="140" height="3" rx="1" fill="#ede6df"/>
+  <rect x="92" y="87" width="70" height="3" rx="1" fill="#87b972"/>
+  <rect x="92" y="95" width="4" height="6" fill="#b98c73"/>
+
+  <!-- Status Bar -->
+  <rect x="77" y="180" width="243" height="20" fill="#1a1513"/>
+  <rect x="77" y="180" width="243" height="1" fill="#362c27"/>
+  <!-- Logo Dot in Status Bar -->
+  <rect x="85" y="186" width="8" height="8" rx="2" fill="#b98c73"/>
+  <rect x="97" y="188" width="42" height="4" rx="1" fill="#b98c73"/>
+  <rect x="145" y="188" width="30" height="4" rx="1" fill="#73655c"/>
+  <rect x="270" y="188" width="42" height="4" rx="1" fill="#73655c"/>
+</svg>
