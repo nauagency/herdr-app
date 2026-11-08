@@ -19,3 +19,12 @@ Khi mở agent `agy` trên máy khác, chỉ cần đưa lệnh:
 ```text
 Đọc file CONVERSATION_CONTEXT.md và README.md trong repo này để hiểu bối cảnh và hướng dẫn tôi tiếp tục các bước thiết lập.
 ```
+
+---
+
+## 3. Quy tắc tiết kiệm >90% Token (Zero-Bloat Rule)
+File `GEMINI.md` chứa quy tắc:
+- **Luồng chính (Main Thread):** Đóng vai trò Orchestrator (Kiến trúc sư), không đọc log dài, không viết code dài trực tiếp.
+- **Ủy thác việc nặng/nhẹ sang Subagent Flash (`Model: flash`):** Xử lý ngầm toàn bộ code, build, test.
+- **Báo cáo tinh gọn:** Chỉ trả về kết quả cô đọng, giữ cho Context Window của luồng chính luôn siêu nhẹ.
+- Tự động áp dụng cho cả 6 tài khoản Antigravity khi chạy trong Herdr.
