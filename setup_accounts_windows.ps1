@@ -1,5 +1,5 @@
-# Script tự động cấu hình 6 tài khoản Antigravity trên Windows PowerShell
-# Chạy script này bằng PowerShell hoặc click đúp cai_dat_multi_agent_windows.bat
+﻿# Script tá»± Ä‘á»™ng cáº¥u hÃ¬nh 6 tÃ i khoáº£n Antigravity trÃªn Windows PowerShell
+# Cháº¡y script nÃ y báº±ng PowerShell hoáº·c click Ä‘Ãºp cai_dat_multi_agent_windows.bat
 
 $installScript = Join-Path $PSScriptRoot "Install-MultiAgent.ps1"
 if (Test-Path $installScript) {
@@ -35,15 +35,15 @@ for ($i = 1; $i -le 6; $i++) {
     }
 
     $cmdPath = "$env:USERPROFILE\agy-$i.cmd"
-    Set-Content -Path $cmdPath -Value "@echo off`r`nset HOME=$accDir`r`nagy %*"
+    Set-Content -Path $cmdPath -Value "@echo off`r`nset "USERPROFILE=$accDir"`r`nset "HOME=$accDir"`r`nset "APPDATA=$accDir\AppData\Roaming"`r`nset "LOCALAPPDATA=$accDir\AppData\Local"`r`nagy %*"
 
     $binCmdPath = "$binDir\agy-$i.cmd"
-    Set-Content -Path $binCmdPath -Value "@echo off`r`nset HOME=$accDir`r`nagy %*"
+    Set-Content -Path $binCmdPath -Value "@echo off`r`nset "USERPROFILE=$accDir"`r`nset "HOME=$accDir"`r`nset "APPDATA=$accDir\AppData\Roaming"`r`nset "LOCALAPPDATA=$accDir\AppData\Local"`r`nagy %*"
     
     Write-Host "Da tao tai khoan $i tai: $accDir (Lenh: agy-$i)" -ForegroundColor Green
 }
 
-# Sao lưu icon vĩnh viễn và tạo shortcut Desktop Multi Agent Herdr nếu có icon
+# Sao lÆ°u icon vÄ©nh viá»…n vÃ  táº¡o shortcut Desktop Multi Agent Herdr náº¿u cÃ³ icon
 $iconSrc = Join-Path $PSScriptRoot "assets\multi_agent_logo.ico"
 $iconDst = Join-Path $baseDir "multi_agent_logo.ico"
 if (Test-Path $iconSrc) {
@@ -73,3 +73,4 @@ try {
 } catch {}
 
 Write-Host "`nThanh cong! Ban da co the mo Terminal va chay agy-1 den agy-6 tren Windows!" -ForegroundColor Yellow
+

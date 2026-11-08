@@ -75,7 +75,7 @@ for ($i = 1; $i -le 6; $i++) {
     }
 
     # Tạo file cmd khởi chạy nhanh trong thư mục bin
-    $cmdContent = "@echo off`r`nset HOME=$accDir`r`nset USERPROFILE_ACC=$accDir`r`nagy %*"
+    $cmdContent = "@echo off`r`nset "USERPROFILE=$accDir"`r`nset "HOME=$accDir"`r`nset "APPDATA=$accDir\AppData\Roaming"`r`nset "LOCALAPPDATA=$accDir\AppData\Local"`r`nagy %*"
     Set-Content -Path "$binDir\agy-$i.cmd" -Value $cmdContent -Encoding ASCII
     Set-Content -Path "$binDir\agy-$i.bat" -Value $cmdContent -Encoding ASCII
     
@@ -354,4 +354,5 @@ Write-Host "7. Plugin Dan anh: ho tro chup anh man hinh dan thang (Ctrl + V) vao
 Write-Host ""
 Write-Host "De bat dau, hay click dup vao bieu tuong 'Multi Agent Herdr' tren Desktop hoac chay Start-MultiAgent.bat!" -ForegroundColor Cyan
 Write-Host ""
+
 

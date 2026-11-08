@@ -31,7 +31,7 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 CURRENT_BACKUP="$BACKUPS_DIR/branding_$TIMESTAMP"
 HAS_BACKUP=false
 
-for ITEM in "$LAYOUTS_DIR/nauagency.json" "$MODS_DIR/nauagency-brand" "$CONFIG_DIR/shared.json"; do
+for ITEM in "$LAYOUTS_DIR/nauagency.json" "$MODS_DIR"/nau* "$CONFIG_DIR/shared.json"; do
     if [ -e "$ITEM" ]; then
         if [ "$HAS_BACKUP" = false ]; then
             mkdir -p "$CURRENT_BACKUP/layouts" "$CURRENT_BACKUP/mods"
@@ -41,9 +41,30 @@ for ITEM in "$LAYOUTS_DIR/nauagency.json" "$MODS_DIR/nauagency-brand" "$CONFIG_D
     fi
 done
 
-echo "[+] Dang sao chep mod nauagency-brand va layout nauagency.json..."
-cp -R "$HERDR_SOURCE/mods/nauagency-brand" "$MODS_DIR/"
+echo "[+] Dang sao chep mods (nau-*) va layout nauagency.json..."
+for MOD_PATH in "$HERDR_SOURCE/mods"/*; do
+    if [ -d "$MOD_PATH" ]; then
+        MOD_NAME=$(basename "$MOD_PATH")
+        rm -rf "$MODS_DIR/$MOD_NAME"
+        cp -R "$MOD_PATH" "$MODS_DIR/"
+        echo "  -> mods/$MOD_NAME"
+    fi
+done
 cp "$HERDR_SOURCE/layouts/nauagency.json" "$LAYOUTS_DIR/nauagency.json"
+
+# Scripts tu dong phan bo moi truong co lap cho Antigravity
+SCRIPTS_SOURCE="$SCRIPT_DIR/scripts"
+LOCAL_BIN="$HOME/.local/bin"
+if [ -d "$SCRIPTS_SOURCE" ]; then
+    mkdir -p "$LOCAL_BIN"
+    cp "$SCRIPTS_SOURCE/agy.sh" "$LOCAL_BIN/agy"
+    chmod +x "$LOCAL_BIN/agy"
+    for i in $(seq 1 6); do
+        echo -e "#!/bin/bash\n\"$LOCAL_BIN/agy\" -a $i \"\$@\"" > "$LOCAL_BIN/agy-$i"
+        chmod +x "$LOCAL_BIN/agy-$i"
+    done
+    echo "  -> Scripts tu dong phan bo moi truong vao $LOCAL_BIN"
+fi
 
 # Thiết lập layout nauagency làm mặc định
 SHARED_JSON="$CONFIG_DIR/shared.json"
@@ -64,6 +85,7 @@ echo "[+] Da dat layout 'nauagency' lam mac dinh trong shared.json"
 
 if pgrep -x "herdr-app" > /dev/null 2>&1; then
     herdr-app do layout.switch --name nauagency 2>/dev/null || true
+    herdr-app do space.rename --name "Mặc định" 2>/dev/null || true
 fi
 
 echo "=========================================================="

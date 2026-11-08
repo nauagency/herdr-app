@@ -7,12 +7,12 @@
 ## 2. Chọn model
 - Luồng chính: user chọn thủ công ở UI, rule không ghi tên model cụ thể.
 - Việc khó (kiến trúc, bug phức tạp, bảo mật, review quan trọng): luồng chính TỰ LÀM. Nếu cần model mạnh hơn, đề nghị user chuyển UI sang Claude Opus 5.5 hoặc Gemini 4 Argon.
-- Việc nặng và rẻ: giao subagent `Model: "flash"` (Gemini 3.8 Flash).
+- Việc nặng và rẻ: giao subagent Gemini 3.8 Flash bản High (`Model: "flash"`, hoặc `Model: "inherit"` nếu UI đang là Flash High).
 - Không dùng `Model: "pro"`, vì chưa xác minh được nó ứng với model nào.
 
 ## 3. Khi nào TỰ LÀM, khi nào GIAO SUBAGENT
 - Tự làm: việc nhỏ 1-2 bước, đọc file dưới ~200 dòng, sửa vài dòng, 1 lệnh có output ngắn, trả lời câu hỏi. Gọi subagent cho việc nhỏ còn tốn hơn.
-- Giao 1 subagent (`invoke_subagent`, `TypeName: "self"`, `Model: "flash"`): khảo sát codebase, đọc nhiều/dài file, build/test log dài, debug lặp, viết code dài.
+- Giao 1 subagent (`invoke_subagent`, `TypeName: "self"`, `Model: "flash"` - Flash High): khảo sát codebase, đọc nhiều/dài file, build/test log dài, debug lặp, viết code dài.
 - Giao 2-4 subagent song song: chỉ khi các nhánh thật sự độc lập và không sửa chung một file.
 
 ## 4. Cách giao việc
