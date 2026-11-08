@@ -35,3 +35,13 @@ File `GEMINI.md` chứa quy tắc:
 - Tên ứng dụng: **Multi Agent** (`/Applications/Multi Agent.app`)
 - Biểu tượng thương hiệu: Thiết kế độc quyền theo nhận diện Nauagency (Warm Ink `#171311` & Terracotta Bronze `#b98c73`).
 - Lệnh khởi động nhanh qua Terminal: `multi-agent`
+
+---
+
+## 5. Web Control Hub & Mobile PWA
+- Tên miền chính thức: **`https://multiagent.nauagency.asia`**
+- Giao thức: Cloudflare Tunnel (Miễn phí 100%, bảo mật HTTPS tự động).
+- Hướng dẫn cài App lên điện thoại:
+  1. Mở Safari (iPhone) hoặc Chrome (Android) truy cập: `https://multiagent.nauagency.asia`.
+  2. Bấm nút **Chia sẻ** (Share) ➔ Chọn **Thêm vào Màn hình chính** (Add to Home Screen).
+  3. Biểu tượng **Multi Agent** với Logo Nauagency sẽ xuất hiện trên màn hình điện thoại, mở full screen để điều khiển dàn Agent từ xa.
