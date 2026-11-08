@@ -45,3 +45,12 @@ File `GEMINI.md` chứa quy tắc:
   1. Mở Safari (iPhone) hoặc Chrome (Android) truy cập: `https://multiagent.nauagency.asia`.
   2. Bấm nút **Chia sẻ** (Share) ➔ Chọn **Thêm vào Màn hình chính** (Add to Home Screen).
   3. Biểu tượng **Multi Agent** với Logo Nauagency sẽ xuất hiện trên màn hình điện thoại, mở full screen để điều khiển dàn Agent từ xa.
+
+---
+
+## 6. Thiết lập Multi Agent trên Windows
+1. Mở PowerShell trên Windows và chạy lệnh:
+   ```powershell
+   .\setup_accounts_windows.ps1
+   ```
+2. Sau khi chạy, bạn có thể gõ ngay `agy-1`, `agy-2`... `agy-6` trên PowerShell hoặc Herdr của Windows để chạy 6 tài khoản song song!
