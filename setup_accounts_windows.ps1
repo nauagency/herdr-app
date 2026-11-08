@@ -43,4 +43,33 @@ for ($i = 1; $i -le 6; $i++) {
     Write-Host "Da tao tai khoan $i tai: $accDir (Lenh: agy-$i)" -ForegroundColor Green
 }
 
+# Sao lưu icon vĩnh viễn và tạo shortcut Desktop Multi Agent Herdr nếu có icon
+$iconSrc = Join-Path $PSScriptRoot "assets\multi_agent_logo.ico"
+$iconDst = Join-Path $baseDir "multi_agent_logo.ico"
+if (Test-Path $iconSrc) {
+    Copy-Item $iconSrc -Destination $iconDst -Force
+}
+$iconPathToUse = if (Test-Path $iconDst) { $iconDst } else { $iconSrc }
+
+try {
+    $desktopPath = [Environment]::GetFolderPath("Desktop")
+    $shortcutLnk = Join-Path $desktopPath "Multi Agent Herdr.lnk"
+    $oldLnk = Join-Path $desktopPath "Multi Agent.lnk"
+    if (Test-Path $oldLnk) { Remove-Item $oldLnk -Force -ErrorAction SilentlyContinue }
+
+    $herdrExe = "$env:LOCALAPPDATA\Programs\herdr-app\herdr-app.exe"
+    $target = if (Test-Path $herdrExe) { $herdrExe } else { "$env:LOCALAPPDATA\Programs\herdr-app\Herdr.exe" }
+    
+    $wsh = New-Object -ComObject WScript.Shell
+    $shortcut = $wsh.CreateShortcut($shortcutLnk)
+    $shortcut.TargetPath = $target
+    $shortcut.WorkingDirectory = $env:USERPROFILE
+    if (Test-Path $iconPathToUse) {
+        $shortcut.IconLocation = "$iconPathToUse,0"
+    }
+    $shortcut.Description = "Multi Agent Herdr - He thong 6 Agent AI doc lap (Nauagency)"
+    $shortcut.Save()
+    Write-Host "Da tao shortcut 'Multi Agent Herdr' tren Desktop!" -ForegroundColor Green
+} catch {}
+
 Write-Host "`nThanh cong! Ban da co the mo Terminal va chay agy-1 den agy-6 tren Windows!" -ForegroundColor Yellow

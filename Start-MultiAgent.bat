@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 chcp 65001 >nul
 title Khoi dong Multi Agent Herdr - Nauagency
 
@@ -27,8 +27,14 @@ if %ERRORLEVEL% equ 0 (
 )
 
 echo [CANH BAO] Khong tim thay ung dung Herdr tren may tinh cua ban!
-echo Dang khoi dong trinh cai dat tu dong 'cai_dat_multi_agent_windows.bat'...
-echo.
-pause
-call "%~dp0cai_dat_multi_agent_windows.bat"
+if exist "%~dp0cai_dat_multi_agent_windows.bat" (
+    echo Dang khoi dong trinh cai dat tu dong 'cai_dat_multi_agent_windows.bat'...
+    echo.
+    pause
+    call "%~dp0cai_dat_multi_agent_windows.bat"
+) else (
+    echo Vui long mo thu muc bo cai va chay file 'cai_dat_multi_agent_windows.bat'.
+    echo.
+    pause
+)
 

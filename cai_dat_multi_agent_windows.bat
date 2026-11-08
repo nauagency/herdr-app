@@ -10,7 +10,7 @@ echo.
 echo Dang khoi chay qua trinh cai dat 1-click...
 echo.
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Install-MultiAgent.ps1"
+powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File "%~dp0Install-MultiAgent.ps1"
 
 echo.
 echo ==========================================================

@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
 # Script: install_branding.sh
-# Mục đích: Đồng bộ giao diện thương hiệu Multi Agent cho Herdr trên macOS.
+# Mục đích: Đồng bộ giao diện thương hiệu Multi Agent Herdr cho Herdr trên macOS.
 #           GIỮ NGUYÊN 100% CHỨC NĂNG VÀ MÀU SẮC GỐC CỦA HERDR.
 #           CHỈ THAY ĐỔI DUY NHẤT: LOGO VÀ TÊN Ở GÓC TRÁI.
 # ==============================================================================
@@ -13,7 +13,7 @@ HERDR_SOURCE="$SCRIPT_DIR/herdr-app"
 CONFIG_DIR="$HOME/.config/herdr-app"
 
 echo "=========================================================="
-echo "   CAI DAT GIAO DIEN MULTI AGENT CHO HERDR TREN MACOS     "
+echo "   CAI DAT GIAO DIEN MULTI AGENT HERDR CHO HERDR TREN MACOS"
 echo "=========================================================="
 
 if [ ! -d "$HERDR_SOURCE" ]; then

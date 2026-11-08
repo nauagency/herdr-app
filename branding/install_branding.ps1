@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Cài đặt giao diện thương hiệu Nauagency / Multi Agent cho Herdr trên Windows.
+    Cài đặt giao diện thương hiệu Nauagency / Multi Agent Herdr cho Herdr trên Windows.
 .DESCRIPTION
     - Sao lưu các file cấu hình cũ trước khi ghi đè.
     - Cài đặt layout: layouts\nauagency.json, layouts\nauagency.svg
@@ -20,7 +20,7 @@ $herdrSource = Join-Path $scriptDir "herdr-app"
 $configDir = Join-Path $env:USERPROFILE ".config\herdr-app"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "   CAI DAT GIAO DIEN MULTI AGENT / NAUAGENCY CHO HERDR   " -ForegroundColor Cyan
+Write-Host "   CAI DAT GIAO DIEN MULTI AGENT HERDR / NAUAGENCY CHO HERDR   " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 if (-not (Test-Path $herdrSource)) {
@@ -171,5 +171,5 @@ if ($wasRunning -and (Test-Path $herdrExe)) {
 }
 
 Write-Host "`n==========================================================" -ForegroundColor Cyan
-Write-Host "   DA CAI DAT THANH CONG BRANDING MULTI AGENT / NAUAGENCY " -ForegroundColor Cyan
+Write-Host "   DA CAI DAT THANH CONG BRANDING MULTI AGENT HERDR / NAUAGENCY " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan

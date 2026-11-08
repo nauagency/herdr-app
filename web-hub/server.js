@@ -110,5 +110,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`[Multi Agent Web Hub] Running on http://127.0.0.1:${PORT}`);
+  console.log(`[Multi Agent Herdr Web Hub] Running on http://127.0.0.1:${PORT}`);
 });
