@@ -210,7 +210,7 @@ pub fn open_main(core: std::sync::Arc<hc::Core>, requests: async_channel::Receiv
                 // macOS: always see-through, so a layout can draw its own title bar
                 // live; the app drags the window (window/titlebar.rs).
                 titlebar: Some(TitlebarOptions {
-                    title: Some("Herdr".into()),
+                    title: Some("Multi Agent Herdr".into()),
                     // Windows: hidden for good (it can't change live); the app draws it.
                     appears_transparent: cfg!(any(target_os = "macos", windows)),
                     traffic_light_position: cfg!(target_os = "macos").then(|| point(px(12.0), px(7.0))),
@@ -221,7 +221,7 @@ pub fn open_main(core: std::sync::Arc<hc::Core>, requests: async_channel::Receiv
                 // it to 20x20; turning it on later (a "system" layout) is fine.
                 window_decorations: Some(WindowDecorations::Client),
                 // Herdr Dev and other side-by-side builds get their own dock icon.
-                app_id: Some(std::env::var("HERDR_APP_ID").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| "herdr-app".into())),
+                app_id: Some(std::env::var("HERDR_APP_ID").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| "multi-agent-herdr".into())),
                 ..Default::default()
             };
             cx.open_window(options, |window, cx| cx.new(|cx| window::AppWindow::new(core, requests, window, cx)))

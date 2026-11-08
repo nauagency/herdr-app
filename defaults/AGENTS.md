@@ -171,7 +171,10 @@ Each file is one whole window. `layout.switch` (`ctrl-shift-l`) cycles
 through them, `layout.switch {name}` picks one; `shared("layout")` is the
 shown one's name. Herdr ships `main` ("Herdr": spaces by machine and the
 agents list on the left, `workspace-chrome`; tabs as pills with a + menu
-that starts a terminal or any installed agent, `new-menu`; panes as cards
+that starts a terminal or any installed agent, `new-menu`; on local Windows,
+each agent chosen there starts in a new profile under
+`%LOCALAPPDATA%/Nauagency/Multi Agent Herdr/agent-environments` while staying
+as another tab in the current space; panes as cards
 with a header; Files and Changes panels on the right, `files` and
 `changes`, opened from the tab bar and remembered per space (which ones:
 shared `"workspace.panels"`, set by the welcome); a status bar,

@@ -7,8 +7,8 @@ function Install-HerdrAppFiles($Binary, $Icon, $Destination) {
     $installed = $false
     try {
         New-Item -ItemType Directory -Path $stage -Force | Out-Null
-        Copy-Item -LiteralPath $Binary -Destination "$stage\herdr-app.exe"
-        Copy-Item -LiteralPath $Icon -Destination "$stage\herdr-app.svg"
+        Copy-Item -LiteralPath $Binary -Destination "$stage\multi-agent-herdr.exe"
+        Copy-Item -LiteralPath $Icon -Destination "$stage\multi-agent-herdr.svg"
         # Renaming the folder leaves an already running app alive.
         if (Test-Path -LiteralPath $Destination) {
             Rename-Item -LiteralPath $Destination -NewName (Split-Path $backup -Leaf)
@@ -47,17 +47,17 @@ Push-Location "$PSScriptRoot\.."
 try {
     cargo build --release --locked --target-dir target
     if ($LASTEXITCODE) { throw "Herdr build failed (exit $LASTEXITCODE)." }
-    $dir = Join-Path $env:LOCALAPPDATA "Programs\herdr-app"
+    $dir = Join-Path $env:LOCALAPPDATA "Programs\multi-agent-herdr"
     Install-HerdrAppFiles "target\release\herdr-app.exe" "assets\icons\herdr-ui-icon-clean.svg" $dir
 } finally {
     Pop-Location
 }
 
-$menu = Join-Path ([Environment]::GetFolderPath("Programs")) "Herdr.lnk"
+$menu = Join-Path ([Environment]::GetFolderPath("Programs")) "Multi Agent Herdr.lnk"
 $link = (New-Object -ComObject WScript.Shell).CreateShortcut($menu)
-$link.TargetPath = Join-Path $dir "herdr-app.exe"
+$link.TargetPath = Join-Path $dir "multi-agent-herdr.exe"
 $link.WorkingDirectory = $env:USERPROFILE
-$link.Description = "Terminals and coding agents that keep running"
+$link.Description = "Multi Agent Herdr by Nauagency"
 $link.Save()
 
 # Keep literal %VARIABLES% and the existing registry value type in PATH.
@@ -75,4 +75,4 @@ try {
     $key.Close()
 }
 if (($env:Path -split ";") -notcontains $dir) { $env:Path += ";$dir" }
-Write-Host "Installed herdr-app. Quit and reopen Herdr to use the new build."
+Write-Host "Installed Multi Agent Herdr. Quit and reopen the app to use the new build."
