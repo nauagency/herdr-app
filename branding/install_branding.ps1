@@ -88,7 +88,7 @@ if (Test-Path -LiteralPath $sourceMods) {
 }
 
 if (Test-Path -LiteralPath $sourceScripts) {
-    foreach ($scriptName in @("launch_agent.cmd", "find_slot.ps1")) {
+    foreach ($scriptName in @("run_agent_isolated.ps1")) {
         $sourceScript = Join-Path $sourceScripts $scriptName
         if (Test-Path -LiteralPath $sourceScript) {
             Copy-Item -LiteralPath $sourceScript -Destination (Join-Path $configDir $scriptName) -Force
@@ -98,11 +98,17 @@ if (Test-Path -LiteralPath $sourceScripts) {
 
 $sharedJsonPath = Join-Path $configDir "shared.json"
 $shared = $null
+Add-Type -AssemblyName System.Web.Extensions
+$jsonSerializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+$jsonSerializer.MaxJsonLength = [int]::MaxValue
 if (Test-Path -LiteralPath $sharedJsonPath) {
     try {
         $raw = Get-Content -LiteralPath $sharedJsonPath -Raw -Encoding UTF8
         if (-not [string]::IsNullOrWhiteSpace($raw)) {
-            $shared = $raw | ConvertFrom-Json
+            # Herdr stores the local machine under an empty-string JSON key.
+            # Windows PowerShell's ConvertFrom-Json rejects that valid key, while
+            # JavaScriptSerializer preserves it and the rest of the settings.
+            $shared = $jsonSerializer.DeserializeObject($raw)
         }
     } catch {
         Write-Warning "Existing shared.json is invalid; a clean file will be written. $_"
@@ -110,22 +116,13 @@ if (Test-Path -LiteralPath $sharedJsonPath) {
 }
 
 if ($null -eq $shared) {
-    $shared = [PSCustomObject]@{}
+    $shared = New-Object 'System.Collections.Generic.Dictionary[string,object]'
 }
 
-if ($shared.PSObject.Properties["layout"]) {
-    $shared.layout = "nauagency"
-} else {
-    $shared | Add-Member -NotePropertyName "layout" -NotePropertyValue "nauagency"
-}
+$shared["layout"] = "nauagency"
+$shared["frame.welcomed"] = "finished"
 
-if ($shared.PSObject.Properties["frame.welcomed"]) {
-    $shared."frame.welcomed" = "finished"
-} else {
-    $shared | Add-Member -NotePropertyName "frame.welcomed" -NotePropertyValue "finished"
-}
-
-$sharedJson = $shared | ConvertTo-Json -Depth 20
+$sharedJson = $jsonSerializer.Serialize($shared)
 $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($sharedJsonPath, $sharedJson, $utf8WithoutBom)
 
