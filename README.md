@@ -28,3 +28,10 @@ File `GEMINI.md` chứa quy tắc:
 - **Ủy thác việc nặng/nhẹ sang Subagent Flash (`Model: flash`):** Xử lý ngầm toàn bộ code, build, test.
 - **Báo cáo tinh gọn:** Chỉ trả về kết quả cô đọng, giữ cho Context Window của luồng chính luôn siêu nhẹ.
 - Tự động áp dụng cho cả 6 tài khoản Antigravity khi chạy trong Herdr.
+
+---
+
+## 4. Ứng dụng Desktop: Multi Agent
+- Tên ứng dụng: **Multi Agent** (`/Applications/Multi Agent.app`)
+- Biểu tượng thương hiệu: Thiết kế độc quyền theo nhận diện Nauagency (Warm Ink `#171311` & Terracotta Bronze `#b98c73`).
+- Lệnh khởi động nhanh qua Terminal: `multi-agent`
