@@ -32,9 +32,17 @@ File `GEMINI.md` chứa quy tắc:
 ---
 
 ## 4. Ứng dụng Desktop: Multi Agent
-- Tên ứng dụng: **Multi Agent** (`/Applications/Multi Agent.app`)
-- Biểu tượng thương hiệu: Thiết kế độc quyền theo nhận diện Nauagency (Warm Ink `#171311` & Terracotta Bronze `#b98c73`).
-- Lệnh khởi động nhanh qua Terminal: `multi-agent`
+- **Biểu tượng thương hiệu:** Thiết kế độc quyền theo nhận diện Nauagency (Warm Ink `#171311` & Terracotta Bronze `#b98c73`).
+- **Trên macOS:**
+  - Ứng dụng: `/Applications/Multi Agent.app`
+  - Khởi động nhanh qua Spotlight hoặc Terminal: `multi-agent`
+- **Trên Windows (Phân biệt quan trọng):**
+  - Hệ điều hành Windows **KHÔNG có file `.app`** (vì `.app` là định dạng gói ứng dụng macOS).
+  - Trên Windows, ứng dụng là file thực thi **`Herdr.exe`** và khi cài đặt sẽ tạo shortcut **Herdr** trên màn hình Desktop.
+  - Người dùng Windows chỉ cần:
+    1. Đổi tên shortcut Desktop từ **Herdr** ➔ **Multi Agent**.
+    2. Click chuột phải ➔ **Properties** ➔ **Change Icon...** ➔ Trỏ đến file `assets/multi_agent_logo.ico` (hoặc `assets/multi_agent_logo.jpg`).
+    3. Hoặc chạy script `setup_accounts_windows.ps1` để tự động hóa toàn bộ.
 
 ---
 
@@ -49,8 +57,11 @@ File `GEMINI.md` chứa quy tắc:
 ---
 
 ## 6. Thiết lập Multi Agent trên Windows
-1. Mở PowerShell trên Windows và chạy lệnh:
+1. Đọc hướng dẫn chi tiết từng bước tại: **`HUONG_DAN_CAI_DAT_PC.md`**.
+2. Mở PowerShell trên Windows tại thư mục này và chạy lệnh:
    ```powershell
    .\setup_accounts_windows.ps1
    ```
-2. Sau khi chạy, bạn có thể gõ ngay `agy-1`, `agy-2`... `agy-6` trên PowerShell hoặc Herdr của Windows để chạy 6 tài khoản song song!
+3. Sau khi chạy:
+   - Script tự động đổi tên shortcut Desktop thành **Multi Agent** và gán Logo Nauagency (`assets\multi_agent_logo.ico`).
+   - Bạn có thể gõ ngay `agy-1`, `agy-2`... `agy-6` trên PowerShell hoặc terminal của Herdr để vận hành đồng thời 6 tài khoản không lo chạm trần rate limit!

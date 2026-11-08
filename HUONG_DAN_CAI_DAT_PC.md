@@ -46,4 +46,37 @@ New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server' 
 2. Xem tên tài khoản Windows (Username):
    - Mở CMD trên Windows, gõ `whoami` sẽ thấy tên tài khoản của bạn.
 3. Trên MacBook:
-   - Mở **Herdr.app** ➔ Chọn **Add a machine** ➔ Điền IP `100.x.y.z` và Username của PC vào là kết nối thành công!
+   - Mở **Multi Agent** (hoặc `Herdr.app`) ➔ Chọn **Add a machine** ➔ Điền IP `100.x.y.z` và Username của PC vào là kết nối thành công!
+
+---
+
+## BƯỚC 5: Cấu hình 6 tài khoản Antigravity trên Windows
+Mở PowerShell tại thư mục repo này và chạy script thiết lập:
+```powershell
+.\setup_accounts_windows.ps1
+```
+Script sẽ tự động tạo 6 profile độc lập (`acc1` đến `acc6`), đồng bộ quy tắc tiết kiệm token `GEMINI.md`, và tạo sẵn các lệnh nhanh `agy-1` đến `agy-6`.
+
+---
+
+## BƯỚC 6: Cài đặt Herdr & Biến thành ứng dụng "Multi Agent" trên Windows
+
+> [!IMPORTANT]
+> **Lưu ý quan trọng cho người dùng Windows:**
+> - Trên Windows **KHÔNG có file `.app`** (vì `.app` là định dạng đóng gói ứng dụng độc quyền của macOS).
+> - Trên Windows, Herdr là file thực thi **`Herdr.exe`** và khi cài đặt sẽ tự động tạo một phím tắt (shortcut) tên **Herdr** trên màn hình Desktop.
+
+Để có ứng dụng thương hiệu **Multi Agent** với Logo Nauagency trên Windows:
+
+### Cách 1: Đổi tên & Gán icon thủ công (Cực kỳ đơn giản - 10 giây)
+1. **Đổi tên:** Ra ngoài màn hình **Desktop** ➔ Click chuột phải vào shortcut **Herdr** ➔ Chọn **Rename (Đổi tên)** (hoặc phím tắt `F2`) ➔ Đổi thành **`Multi Agent`**.
+2. **Gán Icon nhận diện:**
+   - Click chuột phải vào shortcut **`Multi Agent`** vừa đổi tên ➔ Chọn **Properties (Thuộc tính)**.
+   - Tại thẻ **Shortcut**, bấm vào nút **Change Icon... (Đổi biểu tượng)**.
+   - Bấm **Browse...** và tìm chọn file icon đã chuẩn bị sẵn trong thư mục repo:  
+     `assets\multi_agent_logo.ico` (hoặc file `assets\multi_agent_logo.jpg`).
+   - Bấm **OK** ➔ Bấm **Apply** ➔ **OK**.
+3. Shortcut trên Desktop của bạn lúc này đã mang tên **Multi Agent** với biểu tượng Warm Ink & Terracotta Bronze sang trọng của Nauagency.
+
+### Cách 2: Tự động hóa qua Script PowerShell
+Khi bạn chạy `.\setup_accounts_windows.ps1`, script sẽ tự động kiểm tra shortcut `Herdr` trên Desktop của bạn, đổi tên thành `Multi Agent` và gắn icon `assets\multi_agent_logo.ico` một cách hoàn toàn tự động!
