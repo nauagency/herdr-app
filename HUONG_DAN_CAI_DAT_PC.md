@@ -1,20 +1,39 @@
-# HƯỚNG DẪN THIẾT LẬP PC WINDOWS LÀM MÁY CHỦ CHẠY 6 TÀI KHOẢN AGENT
+# HƯỚNG DẪN THIẾT LẬP MULTI AGENT TRÊN PC WINDOWS
 
-Tài liệu này lưu lại toàn bộ các bước thiết lập để bạn mở trên PC hoặc xem lại bất cứ lúc nào.
+> ⚡ **CÀI ĐẶT 1-CLICK TỰ ĐỘNG (KHUYÊN DÙNG):**  
+> **Bên Windows chỉ cần tải repo về và click đúp vào file `cai_dat_multi_agent_windows.bat` là xong toàn bộ từ A đến Z!**
 
 ---
 
-## BƯỚC 1: Chỉnh không cho PC Windows đi ngủ (Sleep)
+## 🌟 TÍNH NĂNG CỦA BỘ CÀI 1-CLICK WINDOWS
+
+Khi bạn click đúp vào file **`cai_dat_multi_agent_windows.bat`**, hệ thống sẽ tự động thực hiện:
+
+1. **Cài đặt Herdr:** Tự động kiểm tra và tải/cài đặt Herdr chính thức phiên bản mới nhất cho Windows nếu máy chưa có.
+2. **Cấu hình 6 tài khoản độc lập:** Tự động tạo 6 môi trường riêng biệt (`agy-1` đến `agy-6`) tại `%USERPROFILE%\.antigravity-accounts\acc1..6`, không bao giờ bị đụng token hay đăng xuất lẫn nhau.
+3. **Kích hoạt quy tắc Zero-Bloat:** Nạp quy tắc `GEMINI.md` vào cả 6 tài khoản để tiết kiệm >90% token ngữ cảnh qua mô hình Orchestrator & Subagent Flash.
+4. **Tạo Shortcut Desktop "Multi Agent":** Tự động tạo biểu tượng ngoài màn hình Desktop với tên **Multi Agent** và icon logo Nauagency chuẩn Windows (`multi_agent_logo.ico`).
+5. **Cài đặt Plugin Paste Ảnh:** Tự động cấu hình plugin `herdr-paste-image` giúp bạn chụp ảnh màn hình bằng Clipboard rồi dán trực tiếp vào Agent.
+6. **Thêm lệnh vào PATH:** Có thể mở bất kỳ Terminal, CMD hoặc PowerShell nào gõ `agy-1` đến `agy-6` là chạy ngay.
+7. **Khởi động nhanh:** Cung cấp sẵn file **`Start-MultiAgent.bat`** để click đúp là mở Multi Agent bất cứ khi nào.
+
+---
+
+## 🖥️ HƯỚNG DẪN DÙNG PC LÀM MÁY CHỦ CHẠY AGENT TỪ XA (KẾT NỐI TỪ MACBOOK)
+
+Nếu bạn muốn biến chiếc PC Windows ở nhà thành máy chủ chạy Agent 24/7 và điều khiển từ MacBook, hãy làm thêm các bước đơn giản sau:
+
+### BƯỚC 1: Chỉnh không cho PC Windows đi ngủ (Sleep)
 1. Nhấn phím `Windows` ➔ Gõ tìm **Power & sleep settings**.
 2. Thiết lập:
-   - **Screen (Màn hình):** Tắt sau `5 phút` hoặc `10 phút` (Màn hình tự tắt đen để bảo vệ máy và tiết kiệm điện).
-   - **Sleep (Chế độ ngủ của máy):** Chọn **Never (Không bao giờ)**.
+   - **Screen (Màn hình):** Tắt sau `5 phút` hoặc `10 phút` (Tự tắt màn hình để bảo vệ và tiết kiệm điện).
+   - **Sleep (Chế độ ngủ):** Chọn **Never (Không bao giờ)**.
 
 ---
 
-## BƯỚC 2: Bật tính năng SSH trên Windows
+### BƯỚC 2: Bật tính năng OpenSSH trên Windows
 1. Nhấn phím `Windows` ➔ Gõ tìm **PowerShell** ➔ Click chuột phải chọn **Run as administrator** (Chạy với quyền Quản trị viên).
-2. Copy đoạn lệnh bên dưới dán vào PowerShell và bấm `Enter`:
+2. Dán đoạn lệnh sau và bấm `Enter` (hoặc chạy script `setup_pc_windows.ps1`):
 
 ```powershell
 # 1. Cài đặt OpenSSH Server
@@ -30,53 +49,19 @@ New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server' 
 
 ---
 
-## BƯỚC 3: Cài đặt Tailscale (Kết nối an toàn Mac ➔ PC)
+### BƯỚC 3: Cài đặt Tailscale (Mạng riêng ảo an toàn Mac ➔ PC)
 1. **Trên PC Windows:**
-   - Vào trang: [https://tailscale.com/download/windows](https://tailscale.com/download/windows) tải và cài đặt.
-   - Cài xong, click vào icon Tailscale ở góc phải taskbar ➔ Chọn **Log in** ➔ Đăng nhập bằng tài khoản Google.
+   - Vào [https://tailscale.com/download/windows](https://tailscale.com/download/windows) tải và cài đặt.
+   - Click vào icon Tailscale ở góc taskbar ➔ **Log in** ➔ Đăng nhập bằng tài khoản Google.
 2. **Trên MacBook:**
-   - Mở App Store trên Mac tìm **Tailscale** tải về (hoặc chạy lệnh: `brew install --cask tailscale`).
-   - Đăng nhập bằng **chính tài khoản Google** bạn đã đăng nhập trên PC.
+   - Mở App Store tìm **Tailscale** tải về (hoặc chạy `brew install --cask tailscale`).
+   - Đăng nhập bằng **chính tài khoản Google** đã dùng trên PC.
 
 ---
 
-## BƯỚC 4: Kết nối từ MacBook vào PC
-1. Xem địa chỉ IP của PC trên Tailscale:
-   - Click vào icon Tailscale trên PC Windows, bạn sẽ thấy địa chỉ IP dạng: `100.x.y.z` (Ví dụ: `100.85.120.45`).
-2. Xem tên tài khoản Windows (Username):
-   - Mở CMD trên Windows, gõ `whoami` sẽ thấy tên tài khoản của bạn.
-3. Trên MacBook:
-   - Mở **Multi Agent** (hoặc `Herdr.app`) ➔ Chọn **Add a machine** ➔ Điền IP `100.x.y.z` và Username của PC vào là kết nối thành công!
-
----
-
-## BƯỚC 5: Cấu hình 6 tài khoản Antigravity trên Windows
-Mở PowerShell tại thư mục repo này và chạy script thiết lập:
-```powershell
-.\setup_accounts_windows.ps1
-```
-Script sẽ tự động tạo 6 profile độc lập (`acc1` đến `acc6`), đồng bộ quy tắc tiết kiệm token `GEMINI.md`, và tạo sẵn các lệnh nhanh `agy-1` đến `agy-6`.
-
----
-
-## BƯỚC 6: Cài đặt Herdr & Biến thành ứng dụng "Multi Agent" trên Windows
-
-> [!IMPORTANT]
-> **Lưu ý quan trọng cho người dùng Windows:**
-> - Trên Windows **KHÔNG có file `.app`** (vì `.app` là định dạng đóng gói ứng dụng độc quyền của macOS).
-> - Trên Windows, Herdr là file thực thi **`Herdr.exe`** và khi cài đặt sẽ tự động tạo một phím tắt (shortcut) tên **Herdr** trên màn hình Desktop.
-
-Để có ứng dụng thương hiệu **Multi Agent** với Logo Nauagency trên Windows:
-
-### Cách 1: Đổi tên & Gán icon thủ công (Cực kỳ đơn giản - 10 giây)
-1. **Đổi tên:** Ra ngoài màn hình **Desktop** ➔ Click chuột phải vào shortcut **Herdr** ➔ Chọn **Rename (Đổi tên)** (hoặc phím tắt `F2`) ➔ Đổi thành **`Multi Agent`**.
-2. **Gán Icon nhận diện:**
-   - Click chuột phải vào shortcut **`Multi Agent`** vừa đổi tên ➔ Chọn **Properties (Thuộc tính)**.
-   - Tại thẻ **Shortcut**, bấm vào nút **Change Icon... (Đổi biểu tượng)**.
-   - Bấm **Browse...** và tìm chọn file icon đã chuẩn bị sẵn trong thư mục repo:  
-     `assets\multi_agent_logo.ico` (hoặc file `assets\multi_agent_logo.jpg`).
-   - Bấm **OK** ➔ Bấm **Apply** ➔ **OK**.
-3. Shortcut trên Desktop của bạn lúc này đã mang tên **Multi Agent** với biểu tượng Warm Ink & Terracotta Bronze sang trọng của Nauagency.
-
-### Cách 2: Tự động hóa qua Script PowerShell
-Khi bạn chạy `.\setup_accounts_windows.ps1`, script sẽ tự động kiểm tra shortcut `Herdr` trên Desktop của bạn, đổi tên thành `Multi Agent` và gắn icon `assets\multi_agent_logo.ico` một cách hoàn toàn tự động!
+### BƯỚC 4: Kết nối từ MacBook sang PC Windows qua Multi Agent
+1. **Lấy thông tin PC:**
+   - Click icon Tailscale trên Windows để xem IP dạng: `100.x.y.z` (Ví dụ: `100.85.120.45`).
+   - Mở CMD trên Windows, gõ `whoami` để xem tên tài khoản Windows (ví dụ: `hoangdam` hoặc `PC\hoangdam`).
+2. **Thêm máy vào Multi Agent trên MacBook:**
+   - Mở **Multi Agent** trên Mac ➔ Chọn **Add a machine** ➔ Điền IP `100.x.y.z` và Username của PC vào là hoàn tất!

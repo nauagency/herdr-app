@@ -1,16 +1,37 @@
-# Herdr & Multi-Account Antigravity Setup
+# Multi Agent - Herdr & Multi-Account Antigravity Setup
 
-Tài liệu và script thiết lập môi trường chạy song song 6 tài khoản Antigravity (Google Gemini) trên máy Mac và PC thông qua Herdr & Antigravity CLI (`agy`).
+Hệ thống quản lý và vận hành song song 6 tài khoản Antigravity (Google Gemini) độc lập trên macOS và Windows PC thông qua Herdr & Antigravity CLI (`agy`), tích hợp cơ chế Zero-Bloat tiết kiệm >90% token.
 
 > **Dành cho Agent (AGY / AI Assistant):** Đọc file `CONVERSATION_CONTEXT.md` để nắm toàn bộ ngữ cảnh đã thảo luận và tiếp tục công việc từ bước kết nối.
 
 ---
 
+## 🚀 Cài đặt nhanh 1-Click trên Windows
+> **Bên Windows chỉ cần tải repo về và click đúp vào file `cai_dat_multi_agent_windows.bat` là xong toàn bộ từ A đến Z!**
+
+Bộ cài 1-click sẽ tự động:
+1. Tự động kiểm tra và cài đặt ứng dụng Herdr bản mới nhất nếu máy chưa có.
+2. Thiết lập 6 tài khoản độc lập (`agy-1` đến `agy-6`) trong `%USERPROFILE%\.antigravity-accounts`.
+3. Tự động tích hợp quy tắc tiết kiệm >90% token `GEMINI.md` vào từng tài khoản.
+4. Cài đặt plugin dán ảnh màn hình `herdr-paste-image`.
+5. Tạo Shortcut **Multi Agent** với icon chính thức đẹp mắt ngay trên màn hình Desktop.
+6. Tạo file **`Start-MultiAgent.bat`** để click đúp là mở Multi Agent ngay lập tức.
+
+---
+
 ## 1. Cấu trúc kho lưu trữ
-- `CONVERSATION_CONTEXT.md`: Tóm tắt toàn bộ ngữ cảnh trao đổi, lý do chọn Herdr và tiến độ hiện tại.
-- `HUONG_DAN_CAI_DAT_PC.md`: Hướng dẫn chi tiết thiết lập máy tính PC Windows làm server SSH + Tailscale.
-- `setup_pc_windows.ps1`: Script PowerShell 1-click kích hoạt OpenSSH Server trên Windows.
+- `cai_dat_multi_agent_windows.bat`: Trình cài đặt 1-click tự động cho Windows (chỉ cần click đúp).
+- `Install-MultiAgent.ps1`: Script PowerShell tự động hóa toàn bộ việc cài đặt Herdr, 6 tài khoản, plugin và shortcut trên Windows.
+- `Start-MultiAgent.bat`: Phím tắt khởi động nhanh Multi Agent trên Windows.
+- `setup_pc_windows.ps1`: Script PowerShell bật OpenSSH Server trên Windows.
+- `setup_accounts_windows.ps1`: Script cấu hình tài khoản Windows (tự động chuyển tiếp đến `Install-MultiAgent.ps1`).
 - `setup_accounts_mac.sh`: Script tự động tạo 6 môi trường CLI độc lập (`agy-1` đến `agy-6`) trên macOS.
+- `assets/multi_agent_logo.ico`: Icon Windows chuẩn đa kích thước (16x16, 32x32, 48x48, 64x64, 128x128, 256x256).
+- `assets/multi_agent_logo.jpg`: Logo thương hiệu gốc Nauagency.
+- `HUONG_DAN_CAI_DAT_PC.md`: Hướng dẫn chi tiết thiết lập máy tính PC Windows làm server SSH + Tailscale.
+- `CONVERSATION_CONTEXT.md`: Tóm tắt toàn bộ ngữ cảnh trao đổi và mô hình kỹ thuật.
+- `GEMINI.md`: Quy tắc Orchestrator Zero-Bloat tiết kiệm token.
+- `web-hub/`: Giao diện Web Control Hub & Mobile PWA.
 
 ---
 
@@ -32,17 +53,9 @@ File `GEMINI.md` chứa quy tắc:
 ---
 
 ## 4. Ứng dụng Desktop: Multi Agent
-- **Biểu tượng thương hiệu:** Thiết kế độc quyền theo nhận diện Nauagency (Warm Ink `#171311` & Terracotta Bronze `#b98c73`).
-- **Trên macOS:**
-  - Ứng dụng: `/Applications/Multi Agent.app`
-  - Khởi động nhanh qua Spotlight hoặc Terminal: `multi-agent`
-- **Trên Windows (Phân biệt quan trọng):**
-  - Hệ điều hành Windows **KHÔNG có file `.app`** (vì `.app` là định dạng gói ứng dụng macOS).
-  - Trên Windows, ứng dụng là file thực thi **`Herdr.exe`** và khi cài đặt sẽ tạo shortcut **Herdr** trên màn hình Desktop.
-  - Người dùng Windows chỉ cần:
-    1. Đổi tên shortcut Desktop từ **Herdr** ➔ **Multi Agent**.
-    2. Click chuột phải ➔ **Properties** ➔ **Change Icon...** ➔ Trỏ đến file `assets/multi_agent_logo.ico` (hoặc `assets/multi_agent_logo.jpg`).
-    3. Hoặc chạy script `setup_accounts_windows.ps1` để tự động hóa toàn bộ.
+- **macOS:** Ứng dụng **Multi Agent** (`/Applications/Multi Agent.app`), lệnh mở nhanh qua Terminal: `multi-agent`.
+- **Windows:** Shortcut **Multi Agent** trên Desktop trỏ trực tiếp đến Herdr kèm icon Nauagency chuẩn `.ico`. Khởi động nhanh bằng `Start-MultiAgent.bat`.
+- Biểu tượng thương hiệu: Thiết kế độc quyền theo nhận diện Nauagency (Warm Ink `#171311` & Terracotta Bronze `#b98c73`).
 
 ---
 
@@ -52,16 +65,17 @@ File `GEMINI.md` chứa quy tắc:
 - Hướng dẫn cài App lên điện thoại:
   1. Mở Safari (iPhone) hoặc Chrome (Android) truy cập: `https://multiagent.nauagency.asia`.
   2. Bấm nút **Chia sẻ** (Share) ➔ Chọn **Thêm vào Màn hình chính** (Add to Home Screen).
-  3. Biểu tượng **Multi Agent** với Logo Nauagency sẽ xuất hiện trên màn hình điện thoại, mở full screen để điều khiển dàn Agent từ xa.
+  3. Biểu tượng **Multi Agent** với Logo Nauagency sẽ xuất hiện trên màn hình điện thoại để điều khiển dàn Agent từ xa.
 
 ---
 
-## 6. Thiết lập Multi Agent trên Windows
-1. Đọc hướng dẫn chi tiết từng bước tại: **`HUONG_DAN_CAI_DAT_PC.md`**.
-2. Mở PowerShell trên Windows tại thư mục này và chạy lệnh:
-   ```powershell
-   .\setup_accounts_windows.ps1
-   ```
-3. Sau khi chạy:
-   - Script tự động đổi tên shortcut Desktop thành **Multi Agent** và gán Logo Nauagency (`assets\multi_agent_logo.ico`).
-   - Bạn có thể gõ ngay `agy-1`, `agy-2`... `agy-6` trên PowerShell hoặc terminal của Herdr để vận hành đồng thời 6 tài khoản không lo chạm trần rate limit!
+## 6. Hướng dẫn sử dụng trên Windows
+1. **Cài đặt 1-Click:** Tải repo về, click đúp vào file `cai_dat_multi_agent_windows.bat`.
+2. **Khởi động ứng dụng:**
+   - Click đúp vào biểu tượng **Multi Agent** ngoài Desktop.
+   - Hoặc click đúp file `Start-MultiAgent.bat`.
+3. **Chạy các tài khoản Agent:**
+   - Trong cửa sổ terminal của Herdr, bạn có thể mở các tab riêng và gõ `agy-1`, `agy-2`, ..., `agy-6`.
+   - Mỗi lệnh tương ứng với một tài khoản Google Gemini độc lập hoàn toàn, không lo rate-limit!
+4. **Dán ảnh màn hình:**
+   - Chụp ảnh màn hình (hoặc bấm `PrtScn` / `Win + Shift + S`), sau đó bấm phím tắt dán ảnh trong Herdr, plugin `herdr-paste-image` sẽ tự động dán đường dẫn ảnh vào cửa sổ agent để AI đọc trực tiếp.
