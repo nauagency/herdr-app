@@ -69,7 +69,8 @@ images, overlays, popups and floats. It captures the app, not the desktop,
 at the window’s physical pixel size, even when covered or minimized. No
 screen-recording permission is needed. Herdr must be running; before its
 first frame or during GPU recovery it reports an error instead of a PNG.
-`HERDR_APP_HOME` selects which running window to ask, as with `status`.
+`HERDR_APP_HOME` selects which running window to ask, as with `status`. This
+Nauagency build defaults to `~/.config/multi-agent-herdr`.
 
 ## The files
 

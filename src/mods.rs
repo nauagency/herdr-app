@@ -1,4 +1,4 @@
-//! Mods: folders of JavaScript under ~/.config/herdr-app/mods that agents write and
+//! Mods: folders of JavaScript under ~/.config/multi-agent-herdr/mods that agents write and
 //! Herdr runs live (gpui-shell), plus the `herdr` module they import.
 
 use crate::layout::Node;
@@ -47,10 +47,10 @@ pub fn note_fonts(cx: &gpui::App) {
 }
 
 /// The app's home: `$HERDR_APP_HOME` (tests, experiments), else
-/// `$XDG_CONFIG_HOME/herdr-app`, else `~/.config/herdr-app`, on every OS.
+/// `$XDG_CONFIG_HOME/multi-agent-herdr`, else `~/.config/multi-agent-herdr`, on every OS.
 pub fn app_dir() -> PathBuf {
     let env = |k: &str| std::env::var_os(k).filter(|v| !v.is_empty()).map(PathBuf::from);
-    env("HERDR_APP_HOME").unwrap_or_else(|| env("XDG_CONFIG_HOME").unwrap_or_else(|| home().join(".config")).join("herdr-app"))
+    env("HERDR_APP_HOME").unwrap_or_else(|| env("XDG_CONFIG_HOME").unwrap_or_else(|| home().join(".config")).join("multi-agent-herdr"))
 }
 
 pub fn mods_dir() -> PathBuf {

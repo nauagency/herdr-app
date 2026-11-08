@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { theme, spaces, panes, knownAgents, run, openOverlay, closeOverlay, props, window, keys, shared, setShared, home } from "herdr";
+import { theme, spaces, panes, knownAgents, run, openOverlay, closeOverlay, props, window, keys, shared, setShared, appHome } from "herdr";
 
 // The last agents each machine reported, shown at once while knownAgents() checks again.
 const KNOWN = "new-menu.agents";
@@ -9,7 +9,7 @@ function isolatedAgentArgv(agent, space) {
   if (window()?.platform !== "windows" || space?.machine) return agent.run;
   return [
     "powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-    `${home()}/.config/herdr-app/mods/new-menu/run-agent-isolated.ps1`,
+    `${appHome()}/mods/new-menu/run-agent-isolated.ps1`,
     agent.key ?? agent.name,
     ...agent.run,
   ];

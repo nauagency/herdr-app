@@ -60,7 +60,7 @@ The terminals run in herdr-core (`hc`), which keeps them alive when the
 window closes. `hc --help`: start, read, wait on and talk to terminals and
 agents. The app shows them and arranges them in spaces and tabs.
 
-Home: ~/.config/herdr-app (HERDR_APP_HOME picks another).
+Home: ~/.config/multi-agent-herdr (HERDR_APP_HOME picks another).
 ";
 
 /// A Windows window app has no console: answers to `herdr-app ls` and the

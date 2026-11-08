@@ -43,6 +43,14 @@ if ($MyInvocation.InvocationName -eq '.') { return }
 $ErrorActionPreference = "Stop"
 if ($env:OS -ne "Windows_NT") { throw "This installer requires Windows." }
 
+# Keep the Nauagency layout and the person's existing spaces/preferences when
+# moving from the official Herdr build, but never overwrite an existing custom home.
+$officialHome = Join-Path $env:USERPROFILE ".config\herdr-app"
+$customHome = Join-Path $env:USERPROFILE ".config\multi-agent-herdr"
+if (-not (Test-Path -LiteralPath $customHome) -and (Test-Path -LiteralPath $officialHome)) {
+    Copy-Item -LiteralPath $officialHome -Destination $customHome -Recurse
+}
+
 Push-Location "$PSScriptRoot\.."
 try {
     cargo build --release --locked --target-dir target
