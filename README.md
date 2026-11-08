@@ -1,6 +1,6 @@
-# Multi Agent Herdr - Herdr & Multi-Account Antigravity Setup (v0.1.13)
+# Multi Agent Herdr - Official Herdr + Nauagency Config (v0.1.13)
 
-Hệ thống quản lý và vận hành song song 6 tài khoản Antigravity (Google Gemini) độc lập trên macOS và Windows PC thông qua Herdr & Antigravity CLI (`agy`), tích hợp cơ chế Zero-Bloat tiết kiệm >90% token cùng nhận diện thương hiệu Nauagency.
+Bộ cấu hình Nauagency chạy trên ứng dụng Herdr chính thức. Trên Windows, installer không còn tạo shortcut giả, không tạo sẵn `acc1`–`acc6` và không tạo launcher `agy-1`–`agy-6`; tài khoản được quản lý trực tiếp trong Herdr chính thức.
 
 > **Dành cho Agent (AGY / AI Assistant):** Đọc file `CONVERSATION_CONTEXT.md` để nắm toàn bộ ngữ cảnh đã thảo luận và tiếp tục công việc từ bước kết nối.
 
@@ -26,16 +26,16 @@ Trình cài đặt macOS sẽ tự động:
 ---
 
 ### 🪟 Dành cho Windows
-> **Bên Windows chỉ cần tải repo về và click đúp vào file `cai_dat_multi_agent_windows.bat` là xong toàn bộ từ A đến Z!**
+> **Tải repo về và click đúp `cai_dat_multi_agent_windows.bat`, hoặc chạy `Install-MultiAgent.ps1` bằng PowerShell.**
 
 Bộ cài 1-click sẽ tự động:
-1. Kiểm tra và cài đặt ứng dụng Herdr bản mới nhất nếu máy chưa có.
-2. Thiết lập 6 tài khoản độc lập (`agy-1` đến `agy-6`) trong `%USERPROFILE%\.antigravity-accounts`.
-3. Tự động tích hợp quy tắc tiết kiệm >90% token `GEMINI.md` vào từng tài khoản.
-4. Cài đặt giao diện nhận diện Nauagency cho Herdr Desktop.
-5. Cài đặt plugin dán ảnh màn hình `herdr-paste-image` (`Ctrl + V`).
-6. Tạo Shortcut **Multi Agent Herdr** với icon Nauagency chuẩn đa độ phân giải (`multi_agent_logo.ico`) ngay trên màn hình Desktop.
-7. Tạo file **`Start-MultiAgent.bat`** để click đúp là mở Multi Agent Herdr ngay lập tức.
+1. Cài đặt hoặc cập nhật **Herdr chính thức** từ `https://releases.herdr.dev/app/install.ps1`.
+2. Kiểm tra binary chính thức sau khi cài.
+3. Sao lưu cấu hình branding hiện tại.
+4. Cài layout và mod Nauagency lên `~/.config/herdr-app`.
+5. Giữ nguyên cơ chế tài khoản, menu và cập nhật của Herdr chính thức.
+
+Bộ cài Windows **không** tạo profile tài khoản mặc định, launcher `agy-*`, shortcut Desktop hay shortcut Start Menu mang tên “Multi Agent Herdr”. Dùng mục **Herdr** chính thức trong Start Menu hoặc lệnh `herdr-app` để mở ứng dụng.
 
 ---
 
@@ -43,14 +43,14 @@ Bộ cài 1-click sẽ tự động:
 - `cai_dat_multi_agent_mac.sh`: Trình cài đặt 1-click tự động toàn diện cho macOS (v0.1.13).
 - `setup_accounts_mac.sh`: Script cấu hình tài khoản macOS (tự động chuyển tiếp đến `cai_dat_multi_agent_mac.sh`).
 - `cai_dat_multi_agent_windows.bat`: Trình cài đặt 1-click tự động cho Windows (chỉ cần click đúp).
-- `Install-MultiAgent.ps1`: Script PowerShell tự động hóa toàn bộ việc cài đặt Herdr, 6 tài khoản, plugin và shortcut trên Windows.
-- `Start-MultiAgent.bat`: Phím tắt khởi động nhanh Multi Agent Herdr trên Windows.
+- `Install-MultiAgent.ps1`: Cài/cập nhật Herdr chính thức và áp dụng cấu hình Nauagency trên Windows.
+- `Start-MultiAgent.bat`: Launcher thủ công tùy chọn trong repo; installer không sao chép hoặc tạo shortcut từ file này.
 - `setup_pc_windows.ps1`: Script PowerShell bật OpenSSH Server trên Windows.
-- `setup_accounts_windows.ps1`: Script cấu hình tài khoản Windows (tự động chuyển tiếp đến `Install-MultiAgent.ps1`).
+- `setup_accounts_windows.ps1`: Entry point tương thích ngược, chỉ chuyển tiếp đến `Install-MultiAgent.ps1`; không tạo tài khoản.
 - `assets/multi_agent_logo.icns`: Icon macOS Retina chuẩn đa kích thước từ 16x16 đến 1024x1024.
 - `assets/multi_agent_logo.ico`: Icon Windows chuẩn đa kích thước (16x16, 32x32, 48x48, 64x64, 128x128, 256x256).
 - `assets/multi_agent_logo.jpg`: Logo thương hiệu gốc Nauagency.
-- `branding/`: Giao diện nhận diện thương hiệu Nauagency cho Herdr (layout `nauagency`, theme Warm Ink & Bronze, mod `nauagency-brand`, script cài đặt).
+- `branding/`: Giao diện nhận diện thương hiệu Nauagency cho Herdr (layout `nauagency`, các mod `nau-*` và script cài đặt).
 - `HUONG_DAN_CAI_DAT_PC.md`: Hướng dẫn chi tiết thiết lập máy tính PC Windows làm server SSH + Tailscale.
 - `CONVERSATION_CONTEXT.md`: Tóm tắt toàn bộ ngữ cảnh trao đổi và mô hình kỹ thuật.
 - `GEMINI.md`: Quy tắc Orchestrator Zero-Bloat tiết kiệm token.
@@ -71,13 +71,13 @@ File `GEMINI.md` chứa quy tắc:
 - **Luồng chính (Main Thread):** Đóng vai trò Orchestrator (Kiến trúc sư), không đọc log dài, không viết code dài trực tiếp.
 - **Ủy thác việc nặng/nhẹ sang Subagent Flash (`Model: flash`):** Xử lý ngầm toàn bộ code, build, test.
 - **Báo cáo tinh gọn:** Chỉ trả về kết quả cô đọng, giữ cho Context Window của luồng chính luôn siêu nhẹ.
-- Tự động áp dụng cho cả 6 tài khoản Antigravity khi chạy trong Herdr.
+- Có thể áp dụng thủ công cho workspace hoặc tài khoản do người dùng tự quản lý trong Herdr.
 
 ---
 
 ## 4. Ứng dụng Desktop: Multi Agent Herdr
 - **macOS:** Ứng dụng **Multi Agent Herdr** (`/Applications/Multi Agent Herdr.app`), icon Retina Nauagency, lệnh mở nhanh qua Terminal: `multi-agent-herdr` hoặc `multi-agent`.
-- **Windows:** Shortcut **Multi Agent Herdr** trên Desktop trỏ trực tiếp đến Herdr kèm icon Nauagency chuẩn `.ico`. Khởi động nhanh bằng `Start-MultiAgent.bat`.
+- **Windows:** Sử dụng ứng dụng **Herdr chính thức** và mục Herdr chính thức trong Start Menu; không tạo shortcut đổi tên ứng dụng.
 - Biểu tượng thương hiệu: Thiết kế độc quyền theo nhận diện Nauagency (Warm Ink `#171311` & Terracotta Bronze `#b98c73`).
 
 ---
@@ -95,17 +95,16 @@ File `GEMINI.md` chứa quy tắc:
 ## 6. Hướng dẫn sử dụng
 1. **Khởi động ứng dụng:**
    - **macOS:** Mở `Multi Agent Herdr.app` trong Applications / Spotlight, hoặc gõ `multi-agent-herdr` (hoặc `multi-agent`) trong Terminal.
-   - **Windows:** Click đúp biểu tượng `Multi Agent Herdr` ngoài Desktop hoặc click đúp file `Start-MultiAgent.bat`.
-2. **Chạy các tài khoản Agent:**
-   - Trong cửa sổ terminal của Herdr, bạn có thể mở các tab riêng và gõ `agy-1`, `agy-2`, ..., `agy-6`.
-   - Mỗi lệnh tương ứng với một tài khoản Google Gemini độc lập hoàn toàn, không lo rate-limit!
+   - **Windows:** Mở **Herdr** từ Start Menu hoặc chạy `herdr-app`.
+2. **Quản lý tài khoản Agent:**
+   - Thêm và quản lý tài khoản trực tiếp trong Herdr. Installer không tạo tài khoản mặc định hoặc thay đổi thư mục hồ sơ người dùng.
 3. **Dán ảnh màn hình:**
    - Chụp ảnh màn hình (hoặc bấm `Cmd + Shift + 4` trên Mac / `Win + Shift + S` trên Windows), sau đó dán vào cửa sổ Herdr, plugin `herdr-paste-image` sẽ tự động dán đường dẫn ảnh vào cửa sổ agent để AI đọc trực tiếp.
 
 ---
 
 ## 7. Giao diện thương hiệu Nauagency (Branding)
-Bộ cấu hình tùy biến giao diện nhận diện thương hiệu độc quyền cho Herdr Desktop bằng layout, theme và mod (không can thiệp binary, không đụng thư mục `frame/` bị Herdr ghi đè mỗi lần khởi động):
+Bộ cấu hình tùy biến giao diện nhận diện thương hiệu cho Herdr Desktop bằng layout và mod, không thay thế binary Herdr chính thức và không đụng thư mục `frame/` bị Herdr ghi đè mỗi lần khởi động:
 
 ### 7.1. Cách cài đặt
 - **Windows:** Chạy PowerShell:
@@ -116,12 +115,11 @@ Bộ cấu hình tùy biến giao diện nhận diện thương hiệu độc qu
   ```bash
   bash ./branding/install_branding.sh
   ```
-Script tự động sao lưu cấu hình cũ trước khi ghi đè, kích hoạt layout `nauagency` làm mặc định và gửi tín hiệu chuyển đổi tức thì nếu ứng dụng Herdr đang mở.
+Script tự động sao lưu cấu hình cũ trước khi ghi đè và đặt layout `nauagency` làm mặc định. Khởi động lại Herdr để nạp cấu hình mới.
 
 ### 7.2. Các thành phần đã tùy biến
 - **Thanh tiêu đề (Sidebar Header):** Hiển thị logo Nauagency + tên "Multi Agent Herdr" cùng phụ đề "Nauagency" bằng Terracotta Bronze, giữ nguyên đầy đủ nút tìm kiếm nhanh và nút thu gọn/mở rộng sidebar.
 - **Thanh trạng thái (Status Bar):** Tích hợp logo Nauagency và tên thương hiệu "Multi Agent Herdr" ở góc trái thanh trạng thái.
-- **Bảng màu giao diện (Theme `nauagency`):** Chuẩn nhận diện Nauagency với màu nền Warm Ink (`#171311`) và màu nhấn Terracotta Bronze (`#b98c73`), áp dụng đồng bộ cho terminals, sidebar, tabs, cards, focus borders và scrollbars.
 
 ### 7.3. Các thành phần giữ nguyên chữ Herdr
 - **Màn hình Welcome (Welcome Dialog):** Nằm trong thư mục `frame/welcome` vốn được ứng dụng Herdr ghi đè lại mỗi khi khởi động nên không can thiệp bằng cấu hình (sẽ tự đóng/ẩn sau khi hoàn tất thiết lập ban đầu).
