@@ -1,0 +1,34 @@
+﻿{
+  "programs": {
+    "agy-1": {
+      "name": "Antigravity (Tài khoản 1)",
+      "icon": "icons/gemini.svg",
+      "run": ["cmd", "/c", "agy-1"]
+    },
+    "agy-2": {
+      "name": "Antigravity (Tài khoản 2)",
+      "icon": "icons/gemini.svg",
+      "run": ["cmd", "/c", "agy-2"]
+    },
+    "agy-3": {
+      "name": "Antigravity (Tài khoản 3)",
+      "icon": "icons/gemini.svg",
+      "run": ["cmd", "/c", "agy-3"]
+    },
+    "agy-4": {
+      "name": "Antigravity (Tài khoản 4)",
+      "icon": "icons/gemini.svg",
+      "run": ["cmd", "/c", "agy-4"]
+    },
+    "agy-5": {
+      "name": "Antigravity (Tài khoản 5)",
+      "icon": "icons/gemini.svg",
+      "run": ["cmd", "/c", "agy-5"]
+    },
+    "agy-6": {
+      "name": "Antigravity (Tài khoản 6)",
+      "icon": "icons/gemini.svg",
+      "run": ["cmd", "/c", "agy-6"]
+    }
+  }
+}

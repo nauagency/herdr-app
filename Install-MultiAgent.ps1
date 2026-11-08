@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Script: Install-MultiAgent.ps1
 # Mục đích: Cài đặt và cấu hình 1-click trọn gói hệ thống Multi Agent Herdr (6 tài khoản)
 #          trên Windows kèm giao diện nhận diện Nauagency, icon Desktop và plugin Herdr.
@@ -166,7 +166,19 @@ if ($needInstallHerdr) {
 # BƯỚC 3: CÀI ĐẶT GIAO DIỆN THƯƠNG HIỆU NAUAGENCY CHO HERDR
 # ------------------------------------------------------------------------------
 Write-Host ""
-Write-Host "[3/6] Dong bo giao dien thuong hieu Nauagency cho Herdr..." -ForegroundColor Cyan
+Write-Host "[+] Kiem tra va tu dong cai dat Claude Code & OpenAI Codex CLI mac dinh...
+if (Get-Command npm -ErrorAction SilentlyContinue) {
+    if (-not (Get-Command claude -ErrorAction SilentlyContinue) -or -not (Get-Command codex -ErrorAction SilentlyContinue)) {
+        Write-Host "  -> Dang cai dat @anthropic-ai/claude-code va @openai/codex qua npm..." -ForegroundColor Yellow
+        cmd.exe /c "npm install -g @anthropic-ai/claude-code @openai/codex" | Out-Null
+        Write-Host "  -> Cai dat Claude Code va Codex CLI thanh cong!" -ForegroundColor Green
+    } else {
+        Write-Host "  -> Claude Code va Codex CLI da san sang!" -ForegroundColor Green
+    }
+}
+
+Write-Host ""
+Write-Host "[3/6] Dong bo giao dien thuong hieu Nauagency cho Herdr...'" -ForegroundColor Cyan
 
 $brandingScript = Join-Path $repoDir "branding\install_branding.ps1"
 if (Test-Path $brandingScript) {
@@ -342,3 +354,4 @@ Write-Host "7. Plugin Dan anh: ho tro chup anh man hinh dan thang (Ctrl + V) vao
 Write-Host ""
 Write-Host "De bat dau, hay click dup vao bieu tuong 'Multi Agent Herdr' tren Desktop hoac chay Start-MultiAgent.bat!" -ForegroundColor Cyan
 Write-Host ""
+
