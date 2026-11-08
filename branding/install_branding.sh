@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # ==============================================================================
 # Script: install_branding.sh
 # Mục đích: Đồng bộ giao diện thương hiệu Multi Agent cho Herdr trên macOS.
