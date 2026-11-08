@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
-title Cai dat Multi Agent - Nauagency
+title Cai dat Multi Agent Herdr - Nauagency
 
 echo ==========================================================
-echo   HE THONG CAI DAT MULTI AGENT (6 TAI KHOAN) CHO WINDOWS
+echo   HE THONG CAI DAT MULTI AGENT HERDR (6 TAI KHOAN) CHO WINDOWS
 echo   Phat trien boi Nauagency
 echo ==========================================================
 echo.

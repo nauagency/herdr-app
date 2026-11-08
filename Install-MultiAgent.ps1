@@ -1,6 +1,6 @@
-﻿# ==============================================================================
+# ==============================================================================
 # Script: Install-MultiAgent.ps1
-# Mục đích: Cài đặt và cấu hình 1-click trọn gói hệ thống Multi Agent (6 tài khoản)
+# Mục đích: Cài đặt và cấu hình 1-click trọn gói hệ thống Multi Agent Herdr (6 tài khoản)
 #          trên Windows kèm icon Desktop và plugin Herdr.
 # Tác giả: Nauagency
 # ==============================================================================
@@ -148,10 +148,10 @@ if ($needInstallHerdr) {
 }
 
 # ------------------------------------------------------------------------------
-# BƯỚC 3: TẠO SHORTCUT DESKTOP "Multi Agent" KÈM ICON LOGO
+# BƯỚC 3: TẠO SHORTCUT DESKTOP "Multi Agent Herdr" KÈM ICON LOGO
 # ------------------------------------------------------------------------------
 Write-Host ""
-Write-Host "[3/5] Tao Shortcut 'Multi Agent' tren Desktop..." -ForegroundColor Cyan
+Write-Host "[3/5] Tao Shortcut 'Multi Agent Herdr' tren Desktop..." -ForegroundColor Cyan
 
 $desktop = [Environment]::GetFolderPath("Desktop")
 $shortcutFile = Join-Path $desktop "Multi Agent Herdr.lnk"
@@ -176,7 +176,7 @@ try {
     if (Test-Path $iconPathToUse) {
         $shortcut.IconLocation = "$iconPathToUse,0"
     }
-    $shortcut.Description = "Multi Agent - He thong 6 Agent AI doc lap (Nauagency)"
+    $shortcut.Description = "Multi Agent Herdr - He thong 6 Agent AI doc lap (Nauagency)"
     $shortcut.Save()
     Write-Host "  -> Da tao thanh cong Shortcut Desktop: $shortcutFile" -ForegroundColor Green
     if (Test-Path $iconPathToUse) {
@@ -239,12 +239,12 @@ Write-Host "          CAI DAT MULTI AGENT HERDR HOAN TAT 100%!              " -F
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Cac tien ich da duoc thiet lap:" -ForegroundColor Yellow
-Write-Host "1. Shortcut Desktop: 'Multi Agent' voi icon thuong hieu." -ForegroundColor White
+Write-Host "1. Shortcut Desktop: 'Multi Agent Herdr' voi icon thuong hieu." -ForegroundColor White
 Write-Host "2. File chay nhanh: 'Start-MultiAgent.bat' trong thu muc nay." -ForegroundColor White
 Write-Host "3. 6 Tai khoan doc lap: agy-1 den agy-6 (chay duoc o bat ky Terminal nao)." -ForegroundColor White
 Write-Host "4. Quy tac Zero-Bloat: GEMINI.md da duoc nap tu dong vao ca 6 tai khoan." -ForegroundColor White
 Write-Host "5. Plugin Dan anh: ho tro chup anh man hinh dan thang vao cua so Agent." -ForegroundColor White
 Write-Host ""
-Write-Host "De bat dau, hay click dup vao bieu tuong 'Multi Agent' tren Desktop hoac chay Start-MultiAgent.bat!" -ForegroundColor Cyan
+Write-Host "De bat dau, hay click dup vao bieu tuong 'Multi Agent Herdr' tren Desktop hoac chay Start-MultiAgent.bat!" -ForegroundColor Cyan
 Write-Host ""
 

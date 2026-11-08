@@ -15,10 +15,10 @@ Mở Terminal tại thư mục này và chạy lệnh:
 ```
 Trình cài đặt macOS sẽ tự động:
 1. Kiểm tra và cài đặt/nâng cấp Herdr CLI (v0.9.5) & Herdr Desktop App (**v0.1.13**) mới nhất.
-2. Tự động thiết lập ứng dụng `/Applications/Multi Agent.app` với bộ icon Retina Nauagency chuẩn macOS (`multi_agent_logo.icns`).
+2. Tự động thiết lập ứng dụng `/Applications/Multi Agent Herdr.app` với bộ icon Retina Nauagency chuẩn macOS (`multi_agent_logo.icns`).
 3. Đăng ký nhận diện LaunchServices và ký chứng thực ad-hoc để ứng dụng xuất hiện đẹp mắt trong Spotlight và Launchpad.
 4. Cài đặt giao diện thương hiệu Nauagency (`branding/install_branding.sh`) vào Herdr GUI.
-5. Tạo lệnh khởi động nhanh qua Terminal: `multi-agent`.
+5. Tạo lệnh khởi động nhanh qua Terminal: `multi-agent-herdr` (và `multi-agent`).
 6. Thiết lập 6 tài khoản độc lập (`agy-1` đến `agy-6`) trong `~/.antigravity-accounts`.
 7. Tự động tích hợp quy tắc tiết kiệm >90% token `GEMINI.md` vào từng tài khoản.
 8. Cài đặt và kích hoạt plugin dán ảnh màn hình `herdr-paste-image` (`Cmd + V`).
@@ -76,7 +76,7 @@ File `GEMINI.md` chứa quy tắc:
 ---
 
 ## 4. Ứng dụng Desktop: Multi Agent Herdr
-- **macOS:** Ứng dụng **Multi Agent** (`/Applications/Multi Agent.app`), icon Retina Nauagency, lệnh mở nhanh qua Terminal: `multi-agent`.
+- **macOS:** Ứng dụng **Multi Agent Herdr** (`/Applications/Multi Agent Herdr.app`), icon Retina Nauagency, lệnh mở nhanh qua Terminal: `multi-agent-herdr` hoặc `multi-agent`.
 - **Windows:** Shortcut **Multi Agent Herdr** trên Desktop trỏ trực tiếp đến Herdr kèm icon Nauagency chuẩn `.ico`. Khởi động nhanh bằng `Start-MultiAgent.bat`.
 - Biểu tượng thương hiệu: Thiết kế độc quyền theo nhận diện Nauagency (Warm Ink `#171311` & Terracotta Bronze `#b98c73`).
 
@@ -94,7 +94,7 @@ File `GEMINI.md` chứa quy tắc:
 
 ## 6. Hướng dẫn sử dụng
 1. **Khởi động ứng dụng:**
-   - **macOS:** Mở `Multi Agent.app` trong Applications / Spotlight, hoặc gõ `multi-agent` trong Terminal.
+   - **macOS:** Mở `Multi Agent Herdr.app` trong Applications / Spotlight, hoặc gõ `multi-agent-herdr` (hoặc `multi-agent`) trong Terminal.
    - **Windows:** Click đúp biểu tượng `Multi Agent Herdr` ngoài Desktop hoặc click đúp file `Start-MultiAgent.bat`.
 2. **Chạy các tài khoản Agent:**
    - Trong cửa sổ terminal của Herdr, bạn có thể mở các tab riêng và gõ `agy-1`, `agy-2`, ..., `agy-6`.

@@ -1,4 +1,4 @@
-﻿# HƯỚNG DẪN THIẾT LẬP MULTI AGENT TRÊN PC WINDOWS
+# HƯỚNG DẪN THIẾT LẬP MULTI AGENT HERDR TRÊN PC WINDOWS
 
 > ⚡ **CÀI ĐẶT 1-CLICK TỰ ĐỘNG (KHUYÊN DÙNG):**  
 > **Bên Windows chỉ cần tải repo về và click đúp vào file `cai_dat_multi_agent_windows.bat` là xong toàn bộ từ A đến Z!**

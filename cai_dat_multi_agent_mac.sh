@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
 # Script: cai_dat_multi_agent_mac.sh
-# Muc dich: Cai dat va cau hinh 1-click tron goi ung dung Multi Agent (v0.1.13)
+# Muc dich: Cai dat va cau hinh 1-click tron goi ung dung Multi Agent Herdr (v0.1.13)
 #           tren macOS voi nhan dien thuong hieu Nauagency, 6 tai khoan doc lap
 #           va plugin dan anh clipboard.
 # Tac gia: Nauagency
@@ -18,16 +18,17 @@ NC='\033[0m' # No Color
 
 echo ""
 echo -e "${CYAN}==========================================================${NC}"
-echo -e "${YELLOW}     HỆ THỐNG MULTI AGENT (6 TÀI KHOẢN) CHO MACOS         ${NC}"
+echo -e "${YELLOW}     HỆ THỐNG MULTI AGENT HERDR (6 TÀI KHOẢN) CHO MACOS   ${NC}"
 echo -e "                Phát triển bởi Nauagency                  "
 echo -e "${CYAN}==========================================================${NC}"
 echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_ACCOUNTS_DIR="$HOME/.antigravity-accounts"
-APP_NAME="Multi Agent"
+APP_NAME="Multi Agent Herdr"
 APP_PATH="/Applications/$APP_NAME.app"
 ORIG_HERDR_APP="/Applications/Herdr.app"
+OLD_MULTI_AGENT_APP="/Applications/Multi Agent.app"
 ICON_SRC="$SCRIPT_DIR/assets/multi_agent_logo.icns"
 
 # Xac dinh thu muc bin cho Homebrew (Apple Silicon: /opt/homebrew/bin, Intel: /usr/local/bin)
@@ -56,7 +57,7 @@ if ! command -v herdr &> /dev/null; then
     brew install herdr || true
 fi
 
-if [ ! -d "$APP_PATH" ] && [ ! -d "$ORIG_HERDR_APP" ]; then
+if [ ! -d "$APP_PATH" ] && [ ! -d "$ORIG_HERDR_APP" ] && [ ! -d "$OLD_MULTI_AGENT_APP" ]; then
     echo -e "  -> Đang cài đặt Herdr App (Cask)..."
     brew install --cask herdr-app || true
 else
@@ -65,16 +66,20 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# BƯỚC 2: THIẾT LẬP THƯƠNG HIỆU MULTI AGENT & ICON NAUAGENCY
+# BƯỚC 2: THIẾT LẬP THƯƠNG HIỆU MULTI AGENT HERDR & ICON NAUAGENCY
 # ------------------------------------------------------------------------------
 echo -e ""
-echo -e "${CYAN}[2/5] Thiết lập ứng dụng Multi Agent với biểu tượng Nauagency...${NC}"
+echo -e "${CYAN}[2/5] Thiết lập ứng dụng Multi Agent Herdr với biểu tượng Nauagency...${NC}"
 
-# Nếu tồn tại Herdr.app, đổi tên thành Multi Agent.app
+# Đổi tên từ Herdr.app hoặc Multi Agent.app cũ thành Multi Agent Herdr.app
 if [ -d "$ORIG_HERDR_APP" ]; then
     echo -e "  -> Đổi tên Herdr.app thành '$APP_NAME.app'..."
     rm -rf "$APP_PATH"
     mv "$ORIG_HERDR_APP" "$APP_PATH"
+elif [ -d "$OLD_MULTI_AGENT_APP" ] && [ "$OLD_MULTI_AGENT_APP" != "$APP_PATH" ]; then
+    echo -e "  -> Đổi tên 'Multi Agent.app' cũ thành '$APP_NAME.app'..."
+    rm -rf "$APP_PATH"
+    mv "$OLD_MULTI_AGENT_APP" "$APP_PATH"
 fi
 
 if [ -d "$APP_PATH" ]; then
@@ -97,9 +102,10 @@ if [ -d "$APP_PATH" ]; then
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_PATH" 2>/dev/null || true
 
     # Tạo symlink CLI
+    ln -sfn "$APP_PATH/Contents/MacOS/Herdr" "$BREW_BIN/multi-agent-herdr" 2>/dev/null || true
     ln -sfn "$APP_PATH/Contents/MacOS/Herdr" "$BREW_BIN/multi-agent" 2>/dev/null || true
     ln -sfn "$APP_PATH/Contents/MacOS/Herdr" "$BREW_BIN/herdr-app" 2>/dev/null || true
-    echo -e "${GREEN}  ✓ Đã thiết lập Multi Agent.app thành công!${NC}"
+    echo -e "${GREEN}  ✓ Đã thiết lập $APP_NAME.app thành công!${NC}"
 else
     echo -e "${YELLOW}  [!] Chưa tìm thấy thư mục $APP_PATH. Hãy kiểm tra lại quá trình tải app.${NC}"
 fi
@@ -160,12 +166,12 @@ done
 # ------------------------------------------------------------------------------
 echo ""
 echo -e "${GREEN}==========================================================${NC}"
-echo -e "${GREEN}        CÀI ĐẶT MULTI AGENT MACOS HOÀN TẤT 100%!          ${NC}"
+echo -e "${GREEN}     CÀI ĐẶT MULTI AGENT HERDR MACOS HOÀN TẤT 100%!       ${NC}"
 echo -e "${GREEN}==========================================================${NC}"
 echo ""
 echo -e "${YELLOW}Các tiện ích đã sẵn sàng:${NC}"
-echo -e "1. Ứng dụng Desktop: ${CYAN}/Applications/Multi Agent.app${NC} (Logo Nauagency)"
-echo -e "2. Khởi động nhanh từ Terminal: gõ lệnh ${YELLOW}multi-agent${NC}"
+echo -e "1. Ứng dụng Desktop: ${CYAN}/Applications/Multi Agent Herdr.app${NC} (Logo Nauagency)"
+echo -e "2. Khởi động nhanh từ Terminal: gõ lệnh ${YELLOW}multi-agent-herdr${NC} hoặc ${YELLOW}multi-agent${NC}"
 echo -e "3. 6 Tài khoản độc lập: chạy ${YELLOW}agy-1${NC} đến ${YELLOW}agy-6${NC} trong từng tab"
 echo -e "4. Quy tắc Zero-Bloat: Tự động tiết kiệm >90% token qua cơ chế Flash subagent"
 echo -e "5. Dán ảnh clipboard: Chụp ảnh màn hình và bấm Cmd + V để đưa ảnh vào Agent"
