@@ -61,11 +61,21 @@ try {
     Pop-Location
 }
 
-$menu = Join-Path ([Environment]::GetFolderPath("Programs")) "Multi Agent Herdr.lnk"
+$manifest = Get-Content -LiteralPath "Cargo.toml"
+$versionLine = $manifest | Select-String -Pattern '^version\s*=\s*"([^"]+)"' | Select-Object -First 1
+if (-not $versionLine) { throw "Cannot read the app version from Cargo.toml." }
+$version = $versionLine.Matches[0].Groups[1].Value
+$programsMenu = [Environment]::GetFolderPath("Programs")
+foreach ($oldShortcut in Get-ChildItem -LiteralPath $programsMenu -Filter "Multi Agent Herdr*.lnk" -File -ErrorAction SilentlyContinue) {
+    [IO.File]::Delete($oldShortcut.FullName)
+}
+$legacyShortcut = Join-Path $programsMenu "Herdr.lnk"
+if ([IO.File]::Exists($legacyShortcut)) { [IO.File]::Delete($legacyShortcut) }
+$menu = Join-Path $programsMenu "Multi Agent Herdr $version.lnk"
 $link = (New-Object -ComObject WScript.Shell).CreateShortcut($menu)
 $link.TargetPath = Join-Path $dir "multi-agent-herdr.exe"
 $link.WorkingDirectory = $env:USERPROFILE
-$link.Description = "Multi Agent Herdr by Nauagency"
+$link.Description = "Multi Agent Herdr $version by Nauagency"
 $link.Save()
 
 # Keep literal %VARIABLES% and the existing registry value type in PATH.
@@ -83,4 +93,4 @@ try {
     $key.Close()
 }
 if (($env:Path -split ";") -notcontains $dir) { $env:Path += ";$dir" }
-Write-Host "Installed Multi Agent Herdr. Quit and reopen the app to use the new build."
+Write-Host "Installed Multi Agent Herdr $version. Quit and reopen the app to use the new build."

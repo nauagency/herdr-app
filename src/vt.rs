@@ -1186,6 +1186,41 @@ impl Vt {
         Some(Row { text, spots, wraps: self.wraps(y) })
     }
 
+    /// Plain text of each visible viewport row (trailing spaces trimmed), without
+    /// touching the render state dirty flags.
+    pub fn viewport_lines(&self) -> Vec<String> {
+        let mut lines = Vec::with_capacity(self.rows as usize);
+        for y in 0..self.rows {
+            let Some(mut r) = self.grid_ref(GHOSTTY_POINT_TAG_VIEWPORT, 0, u32::from(y)) else {
+                continue;
+            };
+            let mut text = String::new();
+            for x in 0..self.cols {
+                r.x = x;
+                let wide = unsafe {
+                    let mut cell: GhosttyCell = Default::default();
+                    ghostty_grid_ref_cell(&r, &mut cell);
+                    let mut wide: GhosttyCellWide = GHOSTTY_CELL_WIDE_NARROW;
+                    ghostty_cell_get(cell, GHOSTTY_CELL_DATA_WIDE, &mut wide as *mut _ as *mut c_void);
+                    wide
+                };
+                if wide == GHOSTTY_CELL_WIDE_SPACER_TAIL || wide == GHOSTTY_CELL_WIDE_SPACER_HEAD {
+                    continue;
+                }
+                let byte = text.len();
+                let mut cps = [0u32; 16];
+                let mut len = 0usize;
+                unsafe { ghostty_grid_ref_graphemes(&r, cps.as_mut_ptr(), cps.len(), &mut len) };
+                text.extend(cps[..len.min(cps.len())].iter().filter_map(|c| char::from_u32(*c)));
+                if text.len() == byte {
+                    text.push(' ');
+                }
+            }
+            lines.push(text.trim_end().to_owned());
+        }
+        lines
+    }
+
     /// The link `find` sees in `text` at spot `at`.
     fn link_in(&self, text: &str, spots: &[Spot], top: u32, at: usize, find: &mut impl FnMut(&str, usize, bool) -> Option<std::ops::Range<usize>>, joined: bool) -> Option<LinkHit> {
         let (target, chosen): (String, Vec<&Spot>) = match spots[at].uri.clone() {

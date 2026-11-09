@@ -1584,7 +1584,7 @@ impl AppWindow {
     fn copy_key(&mut self, window: &Window, cx: &mut Context<Self>) -> bool {
         let Some(t) = self.focused_terminal(window, cx) else { return true };
         t.view.update(cx, |v, cx| {
-            if !v.copy(cx) {
+            if !v.copy(cx) && !v.copy_login_url(cx) {
                 return false;
             }
             v.clear_selection(cx);

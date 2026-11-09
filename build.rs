@@ -43,11 +43,13 @@ fn main() {
     #[cfg(windows)]
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         println!("cargo:rerun-if-changed=assets/icons/herdr-app.ico");
+        let product = format!("Multi Agent Herdr {}", env!("CARGO_PKG_VERSION"));
+        let description = format!("{product} by Nauagency");
         let mut resource = winresource::WindowsResource::new();
         resource
             .set_icon("assets/icons/herdr-app.ico")
-            .set("ProductName", "Multi Agent Herdr")
-            .set("FileDescription", "Multi Agent Herdr by Nauagency");
+            .set("ProductName", &product)
+            .set("FileDescription", &description);
         resource.compile().expect("cannot embed the icon");
     }
 }

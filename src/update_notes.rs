@@ -32,6 +32,10 @@ pub fn parse(text: &str) -> Vec<Note> {
     parse_for_os(text, std::env::consts::OS)
 }
 
+fn release_version(version: &str) -> &str {
+    version.split(['-', '+']).next().unwrap_or(version)
+}
+
 fn parse_for_os(text: &str, os: &str) -> Vec<Note> {
     let mut notes: Vec<Note> = Vec::new();
     let mut fixed = false;
@@ -120,7 +124,9 @@ pub fn started(first_install: bool) {
     let mut launch = LAUNCH.lock().unwrap();
     if launch.is_some() { return; }
     let record = std::fs::read(path("update-notes.json")).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
-    let state = Launch::new(record, env!("CARGO_PKG_VERSION"), first_install);
+    // Nauagency builds add a prerelease suffix for visible test revisions, but
+    // their curated notes still belong to the underlying upstream release.
+    let state = Launch::new(record, release_version(env!("CARGO_PKG_VERSION")), first_install);
     save(&state.record);
     *launch = Some(state);
     std::thread::spawn(|| fetch_media(&all()));
@@ -407,6 +413,6 @@ mod tests {
         assert_eq!(notes[1].items[0].detail, "Another thing");
         assert!(notes[1].items[0].headline.is_empty());
         assert!(!notes[1].items[0].fixed);
-        assert_eq!(parse(include_str!("../CHANGELOG.md"))[0].version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(parse(include_str!("../CHANGELOG.md"))[0].version, release_version(env!("CARGO_PKG_VERSION")));
     }
 }

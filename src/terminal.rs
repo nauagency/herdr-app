@@ -127,6 +127,8 @@ pub struct TerminalView {
     search_input: Option<Entity<InputState>>,
     pending_search_nav: Option<bool>,
     search_task: Option<Task<()>>,
+    saw_codex_onboarding: bool,
+    last_login_url: Option<String>,
     attach_deadline: Instant,
     _reader: Option<Task<()>>,
 }
@@ -279,6 +281,8 @@ impl TerminalView {
             search_input: None,
             pending_search_nav: None,
             search_task: None,
+            saw_codex_onboarding: false,
+            last_login_url: None,
             attach_deadline,
             _reader: None,
         };
@@ -471,11 +475,13 @@ impl TerminalView {
     /// Feeds relayed bytes in; returns false once the stream is over.
     fn ingest(&mut self, batch: Vec<Stream>, cx: &mut Context<Self>) -> bool {
         let mut open = true;
+        let mut saw_data = false;
         let title = {
             let mut g = self.grid.borrow_mut();
             for item in batch {
                 match item {
                     Stream::Data(bytes) => {
+                        saw_data = true;
                         g.vt.allow_clipboard_write(crate::settings::get().clipboard_write);
                         g.vt.write(&bytes);
                         let [clipboard, primary] = g.vt.take_clipboard();
@@ -510,6 +516,29 @@ impl TerminalView {
             }
             g.vt.take_title()
         };
+        if saw_data {
+            let screen = codex_auth_screen(&mut self.grid.borrow_mut().vt);
+            match screen {
+                CodexAuthScreen::OnboardingMenu => {
+                    self.saw_codex_onboarding = true;
+                    self.last_login_url = None;
+                }
+                CodexAuthScreen::BrowserLogin(url) => {
+                    if self.last_login_url.as_deref() != Some(url.as_str()) {
+                        self.last_login_url = Some(url.clone());
+                        cx.write_to_clipboard(ClipboardItem::new_string(url.clone()));
+                        #[cfg(target_os = "linux")]
+                        cx.write_to_primary(ClipboardItem::new_string(url.clone()));
+                        if self.saw_codex_onboarding
+                            || self.typed_at.get().is_some_and(|t| t.elapsed() < Duration::from_secs(15))
+                        {
+                            open_or_focus_chrome_login(url);
+                        }
+                    }
+                }
+                CodexAuthScreen::None => {}
+            }
+        }
         if let Some(title) = title {
             let title = if title.is_empty() { self.address.clone() } else { title };
             self.set_title(&title, cx);
@@ -663,12 +692,31 @@ impl TerminalView {
     /// Returns whether anything was copied. Does not clear the selection: mouse
     /// copy-on-select uses this and keeps the highlight.
     pub fn copy(&mut self, cx: &mut Context<Self>) -> bool {
-        let Some(text) = self.grid.borrow().vt.selection_text() else {
+        let (selection, login_url) = {
+            let mut g = self.grid.borrow_mut();
+            (g.vt.selection_text(), codex_login_url(&mut g.vt))
+        };
+        let Some(mut text) = selection else {
             return false;
         };
+        if let Some(url) = login_url
+            && (text.contains("auth.openai.com") || text.contains("oauth/authorize") || text.contains("localhost:1455"))
+        {
+            text = url;
+        }
         cx.write_to_clipboard(ClipboardItem::new_string(text.clone()));
         #[cfg(target_os = "linux")]
         cx.write_to_primary(ClipboardItem::new_string(text));
+        true
+    }
+
+    pub fn copy_login_url(&mut self, cx: &mut Context<Self>) -> bool {
+        let Some(url) = codex_login_url(&mut self.grid.borrow_mut().vt) else {
+            return false;
+        };
+        cx.write_to_clipboard(ClipboardItem::new_string(url.clone()));
+        #[cfg(target_os = "linux")]
+        cx.write_to_primary(ClipboardItem::new_string(url));
         true
     }
 
@@ -796,6 +844,24 @@ impl TerminalView {
             return;
         }
         let k = &ev.keystroke;
+        if k.key.eq_ignore_ascii_case("c")
+            && k.modifiers.control
+            && !k.modifiers.shift
+            && !k.modifiers.alt
+            && !k.modifiers.platform
+        {
+            if self.copy_login_url(cx) {
+                self.clear_selection(cx);
+                self.send(b"c");
+                cx.stop_propagation();
+                return;
+            }
+            if self.copy(cx) {
+                self.clear_selection(cx);
+                cx.stop_propagation();
+                return;
+            }
+        }
         // Typing clears a selection, as in Herdr.
         if !k.key.starts_with("shift") && !k.key.starts_with("control") && !k.key.starts_with("alt") {
             self.grid.borrow_mut().vt.clear_selection();
@@ -2171,6 +2237,210 @@ impl Render for TerminalView {
 impl Focusable for TerminalView {
     fn focus_handle(&self, _cx: &App) -> FocusHandle {
         self.focus.clone()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum CodexAuthScreen {
+    None,
+    OnboardingMenu,
+    BrowserLogin(String),
+}
+
+fn codex_auth_screen(vt: &Vt) -> CodexAuthScreen {
+    let lines = vt.viewport_lines();
+    if let Some(url) = codex_login_url_from_lines(&lines) {
+        return CodexAuthScreen::BrowserLogin(url);
+    }
+    if lines.iter().any(|l| {
+        l.contains("Choose how you want to use Codex")
+            || l.contains("1. Sign in with ChatGPT")
+            || l.contains("Sign in with ChatGPT")
+    }) {
+        return CodexAuthScreen::OnboardingMenu;
+    }
+    CodexAuthScreen::None
+}
+
+fn codex_login_url(vt: &Vt) -> Option<String> {
+    codex_login_url_from_lines(&vt.viewport_lines())
+}
+
+fn codex_login_url_from_lines(lines: &[String]) -> Option<String> {
+    let is_login_screen = lines.iter().any(|l| {
+        l.contains("Finish signing in via your browser") || l.contains("press c to copy it")
+    });
+    if !is_login_screen {
+        return None;
+    }
+    let start = lines.iter().position(|l| l.trim().starts_with("https://auth.openai.com/"))?;
+    let mut url = String::new();
+    for line in &lines[start..] {
+        let trimmed = line.trim();
+        if trimmed.is_empty()
+            || trimmed.contains(' ')
+            || trimmed.starts_with("On a remote")
+            || trimmed.starts_with("Press ")
+        {
+            break;
+        }
+        url.push_str(trimmed);
+    }
+    (url.starts_with("https://auth.openai.com/") && url.len() > 40).then_some(url)
+}
+
+#[cfg(not(windows))]
+fn open_or_focus_chrome_login(_url: String) {}
+
+#[cfg(windows)]
+fn open_or_focus_chrome_login(url: String) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{ASFW_ANY, AllowSetForegroundWindow};
+    unsafe {
+        AllowSetForegroundWindow(ASFW_ANY);
+    }
+    std::thread::spawn(move || {
+        // Always hand the URL to Chrome ourselves. Codex can print the login
+        // URL without successfully opening it, and merely focusing an existing
+        // Chrome window would otherwise leave the person on their old tab.
+        if let Some(chrome) = find_chrome_exe() {
+            let profile = most_recent_chrome_profile();
+            let mut cmd = crate::spawn::command(chrome);
+            cmd.arg(format!("--profile-directory={profile}"))
+                .arg("--new-tab")
+                .arg(&url);
+            if cmd.spawn().is_ok() {
+                for _ in 0..20 {
+                    std::thread::sleep(Duration::from_millis(150));
+                    if let Some(hwnd) = find_active_chrome_browser_window() {
+                        bring_window_to_front(hwnd);
+                        std::thread::sleep(Duration::from_millis(250));
+                        bring_window_to_front(hwnd);
+                        return;
+                    }
+                }
+            }
+        }
+    });
+}
+
+#[cfg(windows)]
+fn find_chrome_exe() -> Option<std::path::PathBuf> {
+    let candidates = [
+        std::env::var_os("ProgramFiles").map(|p| std::path::PathBuf::from(p).join(r"Google\Chrome\Application\chrome.exe")),
+        std::env::var_os("ProgramFiles(x86)").map(|p| std::path::PathBuf::from(p).join(r"Google\Chrome\Application\chrome.exe")),
+        std::env::var_os("LOCALAPPDATA").map(|p| std::path::PathBuf::from(p).join(r"Google\Chrome\Application\chrome.exe")),
+    ];
+    candidates.into_iter().flatten().find(|p| p.is_file())
+}
+
+#[cfg(windows)]
+fn most_recent_chrome_profile() -> String {
+    let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") else {
+        return "Default".to_owned();
+    };
+    let local_state = std::path::PathBuf::from(local_app_data)
+        .join(r"Google\Chrome\User Data\Local State");
+    let Ok(bytes) = std::fs::read(&local_state) else {
+        return "Default".to_owned();
+    };
+    let Ok(json) = serde_json::from_slice::<Value>(&bytes) else {
+        return "Default".to_owned();
+    };
+    if let Some(last_used) = json
+        .pointer("/profile/last_used")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.trim().is_empty())
+    {
+        return last_used.to_owned();
+    }
+    if let Some(cache) = json
+        .pointer("/profile/info_cache")
+        .and_then(|v| v.as_object())
+    {
+        let mut best: Option<(&str, f64)> = None;
+        for (key, info) in cache {
+            let t = info.get("active_time").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            if best.is_none_or(|(_, best_t)| t > best_t) {
+                best = Some((key.as_str(), t));
+            }
+        }
+        if let Some((profile, _)) = best {
+            return profile.to_owned();
+        }
+    }
+    "Default".to_owned()
+}
+
+#[cfg(windows)]
+fn find_active_chrome_browser_window() -> Option<isize> {
+    use windows_sys::Win32::{
+        Foundation::{HWND, LPARAM},
+        UI::WindowsAndMessaging::{
+            EnumWindows, GetClassNameW, GetWindowTextLengthW, GetWindowTextW, IsWindowVisible,
+        },
+    };
+
+    unsafe extern "system" fn callback(hwnd: HWND, lparam: LPARAM) -> i32 {
+        unsafe {
+            if IsWindowVisible(hwnd) == 0 {
+                return 1;
+            }
+            let mut class_buf = [0u16; 64];
+            let class_len = GetClassNameW(hwnd, class_buf.as_mut_ptr(), class_buf.len() as i32);
+            if class_len <= 0 {
+                return 1;
+            }
+            let class_name = String::from_utf16_lossy(&class_buf[..class_len as usize]);
+            if class_name != "Chrome_WidgetWin_1" {
+                return 1;
+            }
+            let title_len = GetWindowTextLengthW(hwnd);
+            if title_len <= 0 {
+                return 1;
+            }
+            let mut title_buf = vec![0u16; (title_len as usize) + 1];
+            let read_len = GetWindowTextW(hwnd, title_buf.as_mut_ptr(), title_buf.len() as i32);
+            if read_len <= 0 {
+                return 1;
+            }
+            let title = String::from_utf16_lossy(&title_buf[..read_len as usize]);
+            // Only match a real Chrome browser tab window ("... - Google Chrome"),
+            // skipping the Profile Picker ("Google Chrome") and PWA windows ("Zalo").
+            if title.contains(" - Google Chrome") {
+                let out = &mut *(lparam as *mut Option<isize>);
+                *out = Some(hwnd as isize);
+                return 0;
+            }
+            1
+        }
+    }
+
+    let mut found: Option<isize> = None;
+    unsafe {
+        EnumWindows(Some(callback), &mut found as *mut Option<isize> as LPARAM);
+    }
+    found
+}
+
+#[cfg(windows)]
+fn bring_window_to_front(hwnd_raw: isize) {
+    use windows_sys::Win32::{
+        Foundation::HWND,
+        UI::WindowsAndMessaging::{
+            BringWindowToTop, IsIconic, SW_RESTORE, SW_SHOW, SetForegroundWindow, ShowWindow,
+            SwitchToThisWindow,
+        },
+    };
+    unsafe {
+        let hwnd = hwnd_raw as HWND;
+        if IsIconic(hwnd) != 0 {
+            ShowWindow(hwnd, SW_RESTORE);
+        } else {
+            ShowWindow(hwnd, SW_SHOW);
+        }
+        BringWindowToTop(hwnd);
+        SetForegroundWindow(hwnd);
+        SwitchToThisWindow(hwnd, 1);
     }
 }
 
@@ -3702,5 +3972,19 @@ mod tests {
         assert_eq!(pages_to_lines(-0.5, 24), -12);
         assert_eq!(pages_to_lines(-0.5, 25), -13, "half of an odd row count rounds away from zero");
         assert_eq!(pages_to_lines(0.02, 24), 0);
+    }
+
+    #[test]
+    fn codex_login_url_unwraps_multiline_oauth_link() {
+        let mut vt = crate::vt::Vt::new(80, 24);
+        vt.write(
+            b"  Finish signing in via your browser\r\n\r\n  If the link doesn't open automatically, press c to copy it:\r\n\r\n  https://auth.openai.com/oauth/authorize?response_type=code&client_id=app_EMoamEEZ\r\n  73f0CkXaXp7hrann&redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&st\r\n  ate=abc123xyz\r\n\r\n  On a remote or headless machine? Press d to switch to device code.\r\n  Press esc to cancel",
+        );
+        let expected = "https://auth.openai.com/oauth/authorize?response_type=code&client_id=app_EMoamEEZ73f0CkXaXp7hrann&redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&state=abc123xyz";
+        assert_eq!(super::codex_login_url(&vt).as_deref(), Some(expected));
+        assert_eq!(
+            super::codex_auth_screen(&vt),
+            super::CodexAuthScreen::BrowserLogin(expected.to_owned())
+        );
     }
 }

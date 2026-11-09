@@ -76,7 +76,7 @@ pub struct Setup {
 pub fn open(need: Need, requests: async_channel::Receiver<Request>, cx: &mut App) {
     let options = WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds::centered(None, size(px(620.0), px(460.0)), cx))),
-        titlebar: Some(TitlebarOptions { title: Some("Multi Agent Herdr".into()), ..Default::default() }),
+        titlebar: Some(TitlebarOptions { title: Some(format!("Multi Agent Herdr {}", env!("CARGO_PKG_VERSION")).into()), ..Default::default() }),
         app_id: Some("multi-agent-herdr".into()),
         ..Default::default()
     };
