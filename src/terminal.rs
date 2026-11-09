@@ -2275,18 +2275,29 @@ fn codex_login_url_from_lines(lines: &[String]) -> Option<String> {
     }
     let start = lines.iter().position(|l| l.trim().starts_with("https://auth.openai.com/"))?;
     let mut url = String::new();
-    for line in &lines[start..] {
+    let mut end = start;
+    for (offset, line) in lines[start..].iter().enumerate() {
         let trimmed = line.trim();
         if trimmed.is_empty()
             || trimmed.contains(' ')
             || trimmed.starts_with("On a remote")
             || trimmed.starts_with("Press ")
         {
+            end = start + offset;
             break;
         }
         url.push_str(trimmed);
+        end = start + offset + 1;
     }
-    (url.starts_with("https://auth.openai.com/") && url.len() > 40).then_some(url)
+    // The terminal sends a long wrapped URL in several output batches. Empty
+    // viewport rows after the cursor are indistinguishable from the blank line
+    // that terminates it, so wait for Codex's following instruction before
+    // treating the URL as complete. Otherwise every longer partial URL opens
+    // another Chrome tab.
+    let complete = lines[end..].iter().any(|line| {
+        line.contains("On a remote or headless machine") || line.contains("Press esc to cancel")
+    });
+    (complete && url.starts_with("https://auth.openai.com/") && url.len() > 40).then_some(url)
 }
 
 #[cfg(not(windows))]
@@ -3986,5 +3997,15 @@ mod tests {
             super::codex_auth_screen(&vt),
             super::CodexAuthScreen::BrowserLogin(expected.to_owned())
         );
+    }
+
+    #[test]
+    fn codex_login_url_waits_for_the_complete_terminal_message() {
+        let mut vt = crate::vt::Vt::new(80, 24);
+        vt.write(
+            b"  Finish signing in via your browser\r\n\r\n  If the link doesn't open automatically, press c to copy it:\r\n\r\n  https://auth.openai.com/oauth/authorize?response_type=code&client_id=partial",
+        );
+        assert_eq!(super::codex_login_url(&vt), None);
+        assert_eq!(super::codex_auth_screen(&vt), super::CodexAuthScreen::None);
     }
 }

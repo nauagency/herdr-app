@@ -4,6 +4,24 @@ The Herdr 2 desktop app (`herdr-app`): a native GPUI client of
 [herdr-core](https://github.com/herdrdev/herdr-core). Can (`ogulcancelik`)
 maintains it.
 
+## Nauagency fork
+
+This checkout also ships **Multi Agent Herdr**, Nauagency's separately named
+desktop app. For any Windows or macOS work on that app, read
+`docs/nauagency-macos.md` before changing, building, installing or packaging it.
+
+- Keep Windows and macOS behavior aligned unless an OS API requires a guarded
+  implementation. Document every deliberate difference.
+- Every test build increments the `-nau.N` suffix in `Cargo.toml` and
+  `Cargo.lock`, so the person can see which build they are testing.
+- Use `scripts/package-nauagency` for distributable artifacts and the
+  Nauagency installers for local app installs. Do not rename or hand-edit a
+  generated archive.
+- Never commit Apple certificates, API keys, signing passwords, OAuth tokens or
+  agent credentials. Unsigned/ad-hoc packages are for local testing only.
+- Do not publish a release until its native-platform tests pass. A Windows
+  success does not prove the macOS build; use a Mac or the macOS GitHub runner.
+
 If AGENTS.local.md exists, read it too: the maintainer's local rules.
 
 ## Compatibility

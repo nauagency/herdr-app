@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Create a local testing DMG from the app produced by package-nauagency.
+# A Developer ID signed app stays signed; an ad-hoc app still triggers the
+# normal Gatekeeper warning and must not be advertised as notarized.
+set -euo pipefail
+[[ $(uname -s) == Darwin ]] || { echo 'mac-dmg-nauagency requires macOS' >&2; exit 1; }
+cd "$(dirname "$0")/.."
+
+archive=${1:-dist/multi-agent-herdr-macos-aarch64.tar.gz}
+out=${2:-dist/Multi-Agent-Herdr.dmg}
+[[ -f $archive ]] || { echo "missing archive: $archive" >&2; exit 1; }
+[[ $out == *.dmg ]] || { echo 'output must end in .dmg' >&2; exit 1; }
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/multi-agent-herdr-dmg.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+mkdir "$work/source"
+tar -xzf "$archive" -C "$work/source"
+app="$work/source/Multi Agent Herdr.app"
+[[ -d $app ]] || { echo 'archive has no Multi Agent Herdr.app' >&2; exit 1; }
+codesign --verify --deep --strict "$app"
+ln -s /Applications "$work/source/Applications"
+rm -f "$out"
+hdiutil create -volname "Multi Agent Herdr" -srcfolder "$work/source" -format UDZO -ov "$out"
+hdiutil verify "$out"
+
+if [[ -n ${APPLE_API_KEY:-} || -n ${APPLE_API_KEY_ID:-} || -n ${APPLE_API_ISSUER:-} ]]; then
+  : "${APPLE_CERTIFICATE_P12:?notarization requires APPLE_CERTIFICATE_P12}"
+  : "${APPLE_CERTIFICATE_PASSWORD:?notarization requires APPLE_CERTIFICATE_PASSWORD}"
+  : "${APPLE_API_KEY:?missing APPLE_API_KEY}"
+  : "${APPLE_API_KEY_ID:?missing APPLE_API_KEY_ID}"
+  : "${APPLE_API_ISSUER:?missing APPLE_API_ISSUER}"
+  scripts/mac-sign "$out"
+  printf '%s' "$APPLE_API_KEY" > "$work/key.p8"
+  auth=(--key "$work/key.p8" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER")
+  xcrun notarytool submit "$out" "${auth[@]}" --wait --timeout 30m --output-format json > "$work/notary.json"
+  jq -e '.status == "Accepted"' "$work/notary.json" >/dev/null
+  xcrun stapler staple "$out"
+  xcrun stapler validate "$out"
+  spctl --assess --type open --context context:primary-signature --verbose=2 "$out"
+  echo 'mac-dmg-nauagency: signed, notarized and stapled'
+else
+  echo 'mac-dmg-nauagency: local test DMG (not notarized)'
+fi
+shasum -a 256 "$out"
