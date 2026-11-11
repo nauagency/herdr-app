@@ -22,6 +22,7 @@ try {
     Assert ((Get-Content "$destination\multi-agent-herdr.exe") -eq "first build") "First install lost the binary"
     Assert ((Get-Content "$destination\multi-agent-herdr.svg") -eq "icon") "First install lost the icon"
     Assert ((Get-Content "$destination\multi-agent-herdr-core.exe") -eq "core build") "First install lost the core"
+    Assert ((Get-Content "$destination\hc.exe") -eq "core build") "First install lost the core CLI alias"
 
     Set-Content -LiteralPath $binary -Value "new build"
     Install-HerdrAppFiles $binary $core $conpty $icon $destination

@@ -4,11 +4,15 @@ param(
     [Parameter(Position = 1)][AllowEmptyString()][string]$SpaceId = "",
     [Parameter(Position = 2)][ValidateSet("worker", "manager")][string]$Role = "worker",
     [Parameter(Position = 3)][AllowEmptyString()][string]$PreferredProfileId = "",
-    [Parameter(Mandatory, Position = 4)][ValidateNotNullOrEmpty()][string]$AgentCommand,
-    [Parameter(Position = 5, ValueFromRemainingArguments)][string[]]$AgentArguments = @()
+    [Parameter(Position = 4)][AllowEmptyString()][string]$LaunchId = "",
+    [Parameter(Mandatory, Position = 5)][ValidateNotNullOrEmpty()][string]$AgentCommand,
+    [Parameter(Position = 6, ValueFromRemainingArguments)][string[]]$AgentArguments = @()
 )
 
 $ErrorActionPreference = "Stop"
+if ($env:HERDR_CORE_BIN -and (Test-Path -LiteralPath $env:HERDR_CORE_BIN -PathType Leaf)) {
+    Set-Alias -Name hc -Value $env:HERDR_CORE_BIN -Scope Script
+}
 $forceNewInstance = $PreferredProfileId -eq "__new__"
 if ($forceNewInstance) { $PreferredProfileId = "" }
 $commandInfo = Get-Command -Name $AgentCommand -CommandType Application, ExternalScript -ErrorAction Stop | Select-Object -First 1
@@ -74,7 +78,9 @@ try {
 if ($agentFamily -eq "codex") {
     if ($approvalMode -eq "ask") { $AgentArguments += @("--sandbox", "workspace-write", "--ask-for-approval", "on-request") }
     elseif ($approvalMode -eq "full") { $AgentArguments += "--dangerously-bypass-approvals-and-sandbox" }
-    else { $AgentArguments += @("--sandbox", "workspace-write", "--approve-for-me") }
+    # --approve-for-me already selects the workspace-write sandbox. Newer Codex
+    # versions reject it when an explicit --sandbox flag is supplied as well.
+    else { $AgentArguments += "--approve-for-me" }
     # Isolated CODEX_HOME paths are intentionally descriptive and can exceed
     # Windows' AF_UNIX socket path limit when Codex appends its daemon socket.
     # Each Herdr profile is already isolated, so the shared daemon is neither
@@ -344,6 +350,7 @@ if ($env:HC_TERMINAL_ID) {
         & hc label $env:HC_TERMINAL_ID "herdr.profile.space=$SpaceId" | Out-Null
         & hc label $env:HC_TERMINAL_ID "herdr.space=$SpaceId" | Out-Null
         & hc label $env:HC_TERMINAL_ID "herdr.role=$Role" | Out-Null
+        if ($LaunchId) { & hc label $env:HC_TERMINAL_ID "herdr.launch=$LaunchId" | Out-Null }
         & hc label $env:HC_TERMINAL_ID "herdr.model.requested=$requestedModel" | Out-Null
         & hc label $env:HC_TERMINAL_ID "herdr.approval.mode=$approvalMode" | Out-Null
         if ($requestedEffort) { & hc label $env:HC_TERMINAL_ID "herdr.model.effort=$requestedEffort" | Out-Null }
@@ -510,6 +517,7 @@ if ($env:HC_TERMINAL_ID) {
         & hc label $env:HC_TERMINAL_ID "herdr.profile.space=$SpaceId" | Out-Null
         & hc label $env:HC_TERMINAL_ID "herdr.space=$SpaceId" | Out-Null
         & hc label $env:HC_TERMINAL_ID "herdr.role=$Role" | Out-Null
+        if ($LaunchId) { & hc label $env:HC_TERMINAL_ID "herdr.launch=$LaunchId" | Out-Null }
         & hc label $env:HC_TERMINAL_ID "herdr.model.requested=$requestedModel" | Out-Null
         & hc label $env:HC_TERMINAL_ID "herdr.approval.mode=$approvalMode" | Out-Null
         if ($requestedEffort) { & hc label $env:HC_TERMINAL_ID "herdr.model.effort=$requestedEffort" | Out-Null }

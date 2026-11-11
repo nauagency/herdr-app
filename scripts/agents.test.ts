@@ -2,7 +2,12 @@ import { test, expect } from "bun:test";
 import { readFile } from "node:fs/promises";
 
 const source = (await readFile(new URL("../defaults/mods/agents/main.js", import.meta.url), "utf8"))
-  .replace(/^import .*;\n/gm, "").replace("export default class Agents", "class Agents");
+  .replace(/^import .*;\r?\n/gm, "").replace("export default class Agents", "class Agents");
+const persistentMenuSource = (await readFile(new URL("../defaults/mods/persistent-new-menu/main.js", import.meta.url), "utf8"))
+  .replace(/^import .*;\r?\n/gm, "").replace("export default class NewMenu", "class NewMenu");
+const hostflowSource = (await readFile(new URL("../defaults/mods/space-manager-hostflow/main.js", import.meta.url), "utf8"))
+  .replace(/^import .*;\r?\n/gm, "").replace("export default class SpaceManager", "class SpaceManager");
+const isolatedRunnerSource = await readFile(new URL("../defaults/mods/persistent-new-menu/run-agent-isolated.ps1", import.meta.url), "utf8");
 
 function harness(pins: string[], globals: Record<string, unknown> = {}) {
   const data = new Map([["pins", JSON.stringify(pins)]]);
@@ -211,4 +216,52 @@ for (const sort of ["priority", "grouped"]) test(`${sort}: a kept sub-agent keep
   expect(pinned.texts.get("ag-t1")).toContain("t1");
   expect(pinned.texts.get("ag-t3")).toContain("t3");
   expect(keptRender(sort, { kept: [{ address: "t3", parent: "t9" }] }).ids).toContain("ag-t3"); // its parent ended
+});
+
+test("a new agent reveals only the terminal carrying its launch identity", () => {
+  const live: any[] = [{ address: "existing", labels: { "herdr.space": "s1" } }];
+  const writes: any[] = [];
+  const run = (name: string, args: any) => {
+    writes.push([name, args]);
+    if (name !== "tab.new") return;
+    const marker = args.argv[args.argv.indexOf("__new__") + 1];
+    live.push({ address: "wrong", labels: { "herdr.space": "s1", "herdr.launch": "another-launch" } });
+    live.push({ address: "right", labels: { "herdr.space": "s1", "herdr.launch": marker } });
+  };
+  const startAgent = new Function("View", "terminals", "run", "window", "appHome", "closeOverlay", `${persistentMenuSource}; return startAgent;`)(
+    class {}, () => live, run, () => ({ platform: "windows" }), () => "/app", (overlay: string) => writes.push(["closeOverlay", overlay]),
+  );
+  const cx: any = { timer: { after(_ms: number, callback: (cx: any) => void) { callback(cx); } } };
+  startAgent({ key: "codex", name: "Codex", run: ["codex"] }, { id: "s1" }, "new-menu", cx);
+  expect(writes.at(-2)).toEqual(["closeOverlay", "new-menu"]);
+  expect(writes.at(-1)).toEqual(["terminal.peek", { terminal: "right" }]);
+});
+
+test("a waiting profile reveals only its matching profile and launch terminal", () => {
+  const writes: any[] = [];
+  const live = [
+    { address: "old", labels: { "herdr.profile": "slot-1", "herdr.launch": "old-launch" } },
+    { address: "other", labels: { "herdr.profile": "slot-2", "herdr.launch": "wanted-launch" } },
+    { address: "right", labels: { "herdr.profile": "slot-1", "herdr.launch": "wanted-launch" } },
+  ];
+  const SpaceManager = new Function("View", "terminals", "run", `${hostflowSource}; return SpaceManager;`)(
+    class {}, () => live, (...args: any[]) => writes.push(args),
+  );
+  new SpaceManager().revealProfileTerminal("slot-1", "wanted-launch", "old", 0, { timer: { after() {} } });
+  expect(writes).toEqual([["terminal.peek", { terminal: "right" }]]);
+});
+
+test("dismissed profile alerts stay hidden only until their state changes", () => {
+  const helpers = new Function("View", `${hostflowSource}; return { profileAlertSignature, profileAlertDismissed };`)(class {});
+  const profile = { id: "slot-1", loginState: "waiting", lifecycle: "awaiting-user", loginError: "", runtimeError: "", running: true };
+  const dismissed = { [profile.id]: helpers.profileAlertSignature(profile) };
+  expect(helpers.profileAlertDismissed(profile, dismissed)).toBe(true);
+  expect(helpers.profileAlertDismissed({ ...profile, loginState: "failed", loginError: "Login timed out" }, dismissed)).toBe(false);
+});
+
+test("automatic Codex approval does not combine approve-for-me with an explicit sandbox", () => {
+  const autoBranch = isolatedRunnerSource.match(/else \{ \$AgentArguments \+= [^\r\n]+\}/g)?.find(line => line.includes("--approve-for-me"));
+  expect(autoBranch).toBeDefined();
+  expect(autoBranch).toContain('"--approve-for-me"');
+  expect(autoBranch).not.toContain("--sandbox");
 });

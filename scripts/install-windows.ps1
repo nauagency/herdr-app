@@ -9,6 +9,10 @@ function Install-HerdrAppFiles($Binary, $CoreBinary, $Conpty, $Icon, $Destinatio
         New-Item -ItemType Directory -Path $stage -Force | Out-Null
         Copy-Item -LiteralPath $Binary -Destination "$stage\multi-agent-herdr.exe"
         Copy-Item -LiteralPath $CoreBinary -Destination "$stage\multi-agent-herdr-core.exe"
+        # PowerShell mods call the provider-neutral `hc` command. Keep an alias
+        # beside the renamed bundled core so PATH and direct-path callers reach
+        # the exact same control plane.
+        Copy-Item -LiteralPath $CoreBinary -Destination "$stage\hc.exe"
         Copy-Item -LiteralPath $Conpty -Destination "$stage\conpty" -Recurse
         Copy-Item -LiteralPath $Icon -Destination "$stage\multi-agent-herdr.svg"
         # Renaming the folder leaves an already running app alive.

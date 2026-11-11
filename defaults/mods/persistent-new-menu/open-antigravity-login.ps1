@@ -4,6 +4,9 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
+if ($env:HERDR_CORE_BIN -and (Test-Path -LiteralPath $env:HERDR_CORE_BIN -PathType Leaf)) {
+    Set-Alias -Name hc -Value $env:HERDR_CORE_BIN -Scope Script
+}
 $deadline = [DateTime]::UtcNow.AddMinutes(5)
 
 function Open-InChrome([string]$Url) {

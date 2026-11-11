@@ -1,5 +1,6 @@
-//! Finding herdr-core (`hc`) on this machine. The app doesn't carry one: it
-//! uses the core people installed, or installs the core's own release.
+//! Finding the core (`hc`) used by this app. Nauagency builds carry their own
+//! renamed core binary; the exact path is exported so child terminals and
+//! PowerShell mods never fall through to a different `hc` on PATH.
 //!
 //! Where it looks, in order: `core` in settings.json; this process's PATH;
 //! the person's login shell's PATH (an app opened from the Dock or a
@@ -46,6 +47,11 @@ pub fn use_core(bin: PathBuf) {
             unsafe { std::env::set_var("PATH", joined) };
         }
     }
+    // `multi-agent-herdr-core` intentionally has a distinct file name, so
+    // prepending its folder to PATH is not enough for scripts that invoke
+    // `hc`. Child terminal processes inherit this exact control-plane path.
+    // SAFETY: set once at start, before other threads read the environment.
+    unsafe { std::env::set_var("HERDR_CORE_BIN", &bin) };
     *BIN.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(bin);
 }
 

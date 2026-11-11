@@ -4,6 +4,7 @@ import { spaces, agents, terminals, knownAgents, run, openOverlay, theme, shared
 import * as fs from "fs/promises";
 
 const CONFIG = "space-manager.config.v1";
+const DISMISSED_PROFILE_ALERTS = "space-manager.dismissed-profile-alerts.v1";
 const LEADER_RESPONSE_POLICY = `COMMUNICATION POLICY: Trả lời người dùng bằng tiếng Việt, kết luận trước, ngắn gọn, dễ hiểu và dùng từ phổ thông. Chỉ nêu kết quả, trạng thái, thay đổi quan trọng hoặc đúng quyết định còn thiếu. Không chép prompt, policy, log, lệnh, checkpoint, evidence ID, job ID hay quy trình nội bộ trừ khi người dùng hỏi.`;
 const LEADER_ROLE_POLICY = `LEADER MODEL: Bạn là đầu mối duy nhất giữa người dùng và đội. Hãy hiểu mục tiêu, chia thành các việc độc lập, giao cho worker phù hợp, rồi kết thúc lượt và chờ mailbox chủ động đánh thức; tuyệt đối không poll terminal, không lặp hc read/hc wait và không phát tiến độ vụn. Worker chỉ nhận ngữ cảnh của đúng việc. Khi mọi việc con đã hoàn tất, bạn tự đối chiếu các kết quả, xử lý mâu thuẫn và trả người dùng một kết luận tổng hợp. Với nghiên cứu chỉ đọc, bạn không tự đọc repo thay worker. Với triển khai code, bạn xác định tiêu chí đạt, yêu cầu kiểm tra cục bộ và review bằng chứng trước khi xin duyệt merge/deploy. Worker bị chặn phải báo lại bạn; chỉ bạn mới hỏi người dùng. Không có Host AI trung gian.`;
 const FLOW_PROFILES = "space-flow.profiles.v1";
@@ -45,6 +46,14 @@ function limitTone(t, value) {
 function normalizedModel(value) { return String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
 function asArray(value) { return value == null ? [] : Array.isArray(value) ? value : [value]; }
 function profileProvider(profile) { return String(profile.provider || profile.agentFamily || profile.agent || "").toLowerCase(); }
+function profileAlertSignature(profile) {
+  return JSON.stringify([profile?.loginState ?? "", profile?.lifecycle ?? "", profile?.loginError ?? "", profile?.runtimeError ?? "", Boolean(profile?.running)]);
+}
+function profileAlertDismissed(profile, dismissed) { return dismissed?.[profile.id] === profileAlertSignature(profile); }
+function launchId(profile) {
+  const key = String(profile?.id || profileProvider(profile) || "agent").replace(/[^A-Za-z0-9._-]+/g, "-");
+  return `${key}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 function quotaFloor(profile) {
   const values = [profile?.usage?.fiveHour, profile?.usage?.week]
     .filter(value => value != null && Number.isFinite(Number(value)))
@@ -418,7 +427,7 @@ export default class SpaceManager extends View {
     }
     const isolated = space.machine ? argv : [
       "powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-      `${appHome()}/mods/persistent-new-menu/run-agent-isolated.ps1`, host.key, space.id, "manager", cfg.profileId || "__new__", ...argv,
+      `${appHome()}/mods/persistent-new-menu/run-agent-isolated.ps1`, host.key, space.id, "manager", cfg.profileId || "__new__", launchId({ id: cfg.profileId, provider: host.key }), ...argv,
     ];
     (async () => {
       const path = space.machine ? null : await this.saveHostPolicy(space, task);
@@ -500,7 +509,7 @@ export default class SpaceManager extends View {
     cx.notify();
   }
 
-  async restartProfileNow(profile, isManager, space, liveTerminal) {
+  async restartProfileNow(profile, isManager, space, liveTerminal, launch = launchId(profile)) {
     const host = this.installed.find(a => a.installed && a.key === (profile.provider || profile.agentFamily || profile.agent));
     if (!host) throw new Error(`Không tìm thấy ${profile.provider || profile.agentFamily || profile.agent}`);
     if (liveTerminal?.address) {
@@ -513,17 +522,20 @@ export default class SpaceManager extends View {
     const args = savedArgs.length ? savedArgs : host.run.slice(1).filter(value => typeof value === "string" && value.trim().length > 0);
     const command = profile.command || host.run[0];
     const isolated = ["powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-      `${appHome()}/mods/persistent-new-menu/run-agent-isolated.ps1`, host.key, space.id, isManager ? "manager" : "worker", profile.id, command, ...args];
+      `${appHome()}/mods/persistent-new-menu/run-agent-isolated.ps1`, host.key, space.id, isManager ? "manager" : "worker", profile.id, launch, command, ...args];
     run("tab.new", { name: isManager ? "Leader" : host.name, space: space.id, folder: space.folder, argv: isolated });
+    return launch;
   }
 
-  revealProfileTerminal(profileId, previousAddress, attempt, cx) {
-    const terminal = [...terminals()].reverse().find(row => row.address !== previousAddress && row.labels?.["herdr.profile"] === profileId);
+  revealProfileTerminal(profileId, launch, previousAddress, attempt, cx) {
+    const terminal = [...terminals()].reverse().find(row => row.address !== previousAddress
+      && row.labels?.["herdr.profile"] === profileId
+      && row.labels?.["herdr.launch"] === launch);
     if (terminal) {
       showAgentTerminal(terminal.address);
       return;
     }
-    if (attempt < 30) cx.timer.after(100, innerCx => this.revealProfileTerminal(profileId, previousAddress, attempt + 1, innerCx));
+    if (attempt < 60) cx.timer.after(100, innerCx => this.revealProfileTerminal(profileId, launch, previousAddress, attempt + 1, innerCx));
   }
 
   restartProfile(profile, isManager, space, liveTerminal, cx) {
@@ -534,8 +546,8 @@ export default class SpaceManager extends View {
     }
     cx.spawn(async cx => {
       try {
-        await this.restartProfileNow(profile, isManager, space, liveTerminal);
-        cx.timer.after(80, innerCx => this.revealProfileTerminal(profile.id, liveTerminal?.address, 0, innerCx));
+        const launch = await this.restartProfileNow(profile, isManager, space, liveTerminal);
+        cx.timer.after(80, innerCx => this.revealProfileTerminal(profile.id, launch, liveTerminal?.address, 0, innerCx));
       } catch (e) {
         notify({ title: "Chưa khởi động lại được agent", body: String(e.message ?? e), level: "warning" });
       }
@@ -727,7 +739,16 @@ export default class SpaceManager extends View {
         if (failed || !live?.terminal?.address) this.restartProfile(profile, false, space, live?.terminal, cx);
         else showAgentTerminal(live.terminal.address);
       })
-      .child(div().text_size(10.5).font_semibold().text_color(t.blocked).child("Cần bạn"))
+      .child(h_flex().items_center().gap(6)
+        .child(div().flex_1().text_size(10.5).font_semibold().text_color(t.blocked).child("Cần bạn"))
+        .child(div().id(`dismiss-attention-${profile.id}`).size(20).rounded(6).items_center().justify_center().text_size(14).text_color(t.muted)
+          .cursor_pointer().hover(style => style.bg(t.hover).text_color(t.foreground))
+          .on_click((_event, cx) => {
+            cx.stop_propagation();
+            const dismissed = shared(DISMISSED_PROFILE_ALERTS) ?? {};
+            setShared(DISMISSED_PROFILE_ALERTS, { ...dismissed, [profile.id]: profileAlertSignature(profile) });
+            cx.notify();
+          }).child("×")))
       .child(div().truncate().text_size(11).text_color(t.foreground).child(`${profile.agentFamily || profile.provider || "Agent"}${profile.email ? ` · ${profile.email}` : ""}`))
       .child(div().truncate().text_size(10).text_color(t.dim).child(failed ? "Bấm để đăng nhập lại." : "Bấm để mở màn đăng nhập hoặc xác nhận Trust."));
   }
@@ -774,7 +795,8 @@ export default class SpaceManager extends View {
     };
     const workerEntries = workers.map((profile, index) => ({ profile, index, live: byProfile.get(profile.id) }));
     const visibleWorkers = workerEntries.filter(entry => matchesAgentFilter(entry.profile, entry.live));
-    const profileAlerts = profiles.filter(p => p.loginState === "waiting" || p.loginState === "failed" || p.lifecycle === "error")
+    const dismissedProfileAlerts = shared(DISMISSED_PROFILE_ALERTS) ?? {};
+    const profileAlerts = profiles.filter(p => (p.loginState === "waiting" || p.loginState === "failed" || p.lifecycle === "error") && !profileAlertDismissed(p, dismissedProfileAlerts))
       .map(profile => ({ profile, live: byProfile.get(profile.id) }));
     const mapped = new Set([...byProfile.values()].map(entry => entry.agent?.address).filter(Boolean));
     const unmatched = liveAgents.filter(a => a.address !== manager?.address && !mapped.has(a.address)).map(a => {

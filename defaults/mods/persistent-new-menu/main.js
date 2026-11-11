@@ -5,7 +5,12 @@ import { theme, spaces, panes, terminals, knownAgents, run, openOverlay, closeOv
 // The last agents each machine reported, shown at once while knownAgents() checks again.
 const KNOWN = "new-menu.agents";
 
-function isolatedAgentArgv(agent, space) {
+function launchId(agent) {
+  const key = String(agent.key ?? agent.name ?? "agent").replace(/[^A-Za-z0-9._-]+/g, "-");
+  return `${key}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function isolatedAgentArgv(agent, space, launch) {
   if (window()?.platform !== "windows" || space?.machine) return agent.run;
   return [
     "powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
@@ -14,20 +19,26 @@ function isolatedAgentArgv(agent, space) {
     space?.id ?? "",
     "worker",
     "__new__",
+    launch,
     ...agent.run,
   ];
 }
 
-function startAgent(agent, space, cx) {
+function startAgent(agent, space, overlay, cx) {
+  const launch = launchId(agent);
   const before = new Set(terminals().map(terminal => terminal.address));
-  run("tab.new", { name: agent.name, space: space?.id, argv: isolatedAgentArgv(agent, space) });
+  run("tab.new", { name: agent.name, space: space?.id, argv: isolatedAgentArgv(agent, space, launch) });
   const reveal = (attempt, innerCx) => {
-    const terminal = [...terminals()].reverse().find(row => !before.has(row.address) && (!space?.id || !row.labels?.["herdr.space"] || row.labels?.["herdr.space"] === space.id));
+    const terminal = [...terminals()].reverse().find(row => row.labels?.["herdr.launch"] === launch
+      && !before.has(row.address)
+      && (!space?.id || row.labels?.["herdr.space"] === space.id));
     if (terminal) {
+      closeOverlay(overlay);
       run("terminal.peek", { terminal: terminal.address });
       return;
     }
-    if (attempt < 24) innerCx.timer.after(100, nextCx => reveal(attempt + 1, nextCx));
+    if (attempt < 60) innerCx.timer.after(100, nextCx => reveal(attempt + 1, nextCx));
+    else closeOverlay(overlay);
   };
   cx.timer.after(80, innerCx => reveal(0, innerCx));
 }
@@ -65,11 +76,11 @@ export default class NewMenu extends View {
       cx.notify();
     });
   }
-  row(id, icon, name, action, hint = "", enabled = true) {
+  row(id, icon, name, action, hint = "", enabled = true, closeAfterClick = true) {
     const t = theme();
     return h_flex().id(id).h(31).px(9).gap(10).rounded(7).items_center().flex_none()
       .text_color(enabled ? t.foreground : t.dim).when(enabled, el => el.hover(s => s.bg(t.selected)))
-      .on_click((_event, cx) => { if (enabled) { closeOverlay(props().overlay); action(cx); } })
+      .on_click((_event, cx) => { if (enabled) { if (closeAfterClick) closeOverlay(props().overlay); action(cx); } })
       .child(icon).child(div().flex_1().child(name)).child(div().text_size(11).text_color(t.dim).child(hint));
   }
   render() {
@@ -83,14 +94,13 @@ export default class NewMenu extends View {
         if (e.modifiers.control || e.modifiers.platform || e.modifiers.alt) return;
         const agent = /^[1-9]$/.test(e.key) ? installed[Number(e.key) - 1] : null;
         if (!agent) return;
-        closeOverlay(props().overlay);
-        startAgent(agent, space, cx);
+        startAgent(agent, space, props().overlay, cx);
       })
       .child(this.row("terminal", svg("icons/shell.svg").size(14), "Terminal", () => run("tab.new", { space: space?.id }), shortcut("tab.new")))
       .child(div().px(9).pt(8).pb(4).text_size(11).text_color(t.dim).child("Start an agent in a new environment"))
       .child(v_flex().flex_1().min_h(0).overflow_y_scrollbar()
         .children(choices.map((a, i) => this.row(a.key, a.tint ? svg(a.icon).size(14).text_color(t.foreground) : image(a.icon).size(14), a.name,
-          cx => startAgent(a, space, cx), a.installed ? (i < 9 ? String(i + 1) : "") : "not installed", a.installed)))
+          cx => startAgent(a, space, props().overlay, cx), a.installed ? (i < 9 ? String(i + 1) : "") : "not installed", a.installed, false)))
         .when(this.agents.length === 0, el => el.child(div().px(9).py(6).text_color(t.dim).child(this.failed ? "Could not load agents" : "Checking installed agents…"))))
       .child(div().h(1).mx(4).my(5).bg(t.border))
       .child(this.row("space", div().w(14).child("+"), "New space", () => run("space-manager-spaces.new"), shortcut("space.new")))

@@ -42,6 +42,7 @@ if [[ $os == windows ]]; then
   mkdir -p "$dir"
   cp target/release/herdr-app.exe "$dir/multi-agent-herdr.exe"
   cp "$core_repo/target/release/herdr-core.exe" "$dir/multi-agent-herdr-core.exe"
+  cp "$core_repo/target/release/herdr-core.exe" "$dir/hc.exe"
   cp -R "$core_repo/target/release/conpty" "$dir/conpty"
   cp assets/icons/herdr-ui-icon-clean.svg "$dir/multi-agent-herdr.svg"
   cp LICENSE THIRD-PARTY-NOTICES "$dir/"
@@ -62,6 +63,9 @@ else
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
   cp target/release/herdr-app "$app/Contents/MacOS/$executable"
   chmod +x "$app/Contents/MacOS/$executable"
+  cp "$core_repo/target/release/herdr-core" "$app/Contents/MacOS/multi-agent-herdr-core"
+  cp "$core_repo/target/release/herdr-core" "$app/Contents/MacOS/hc"
+  chmod +x "$app/Contents/MacOS/multi-agent-herdr-core" "$app/Contents/MacOS/hc"
   cp assets/icons/Herdr.icns "$app/Contents/Resources/$icon"
   cp LICENSE THIRD-PARTY-NOTICES "$app/Contents/Resources/"
   marketing=${version%%-*}

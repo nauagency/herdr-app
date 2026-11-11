@@ -6,6 +6,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($env:HERDR_CORE_BIN -and (Test-Path -LiteralPath $env:HERDR_CORE_BIN -PathType Leaf)) {
+    Set-Alias -Name hc -Value $env:HERDR_CORE_BIN -Scope Script
+}
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $OutputEncoding = [Text.UTF8Encoding]::new($false)
 $root = if ($env:NAUAGENCY_AGENT_ENVIRONMENT_ROOT) {
