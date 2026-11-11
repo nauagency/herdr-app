@@ -1,13 +1,10 @@
-# Installs herdr-core (hc) on Windows, or updates it:
-#
-#   powershell -c "irm https://releases.herdr.dev/core/install.ps1 | iex"
+# Installs Multi Agent Herdr Core from a local release zip.
 #
 # Into %LOCALAPPDATA%\Programs\herdr-core (herdr-core.exe, Microsoft's
 # ConPTY beside it), added to your PATH, with hc.exe linked to it only if no
 # `hc` exists. An hc that is already there is swapped the planned way (hc
 # update --from): running terminals keep running. No admin needed.
-# HC_VERSION=0.2.0 picks a version; HERDR_RELEASES_URL points elsewhere
-# (tests); HC_INSTALL_DIR installs elsewhere.
+# HC_INSTALL_DIR installs elsewhere.
 #
 # `-File install.ps1 <release zip> [session]` installs from a zip already
 # here, checked by whoever put it here, and removes both files after
@@ -23,7 +20,6 @@ $ProgressPreference = "SilentlyContinue"
 # throw, not exit: under `irm | iex`, exit would close the person's window.
 function Fail($why) { throw "hc: $why" }
 
-$releases = if ($env:HERDR_RELEASES_URL) { $env:HERDR_RELEASES_URL.TrimEnd("/") } else { "https://releases.herdr.dev" }
 $dir = if ($env:HC_INSTALL_DIR) { $env:HC_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "Programs\herdr-core" }
 $arch = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
 if ($arch -ne "AMD64") { Fail "no build for $arch Windows yet (x64 only)" }
@@ -40,9 +36,12 @@ try {
   if ($zip) {
     Copy-Item $zip "$tmp\hc.zip"
   } else {
+    Fail "online installation is disabled; install Multi Agent Herdr or provide a local release zip"
+    <# unreachable legacy release parsing retained below for local packaging tests
     $manifest = if ($env:HC_VERSION) { "$releases/core/$($env:HC_VERSION)/manifest.json" } else { "$releases/core/latest.json" }
     curl.exe -fsSL $manifest -o "$tmp\manifest.json"
     if ($LASTEXITCODE) { Fail "cannot reach $manifest" }
+    #>
     $m = Get-Content -Raw "$tmp\manifest.json" | ConvertFrom-Json
     $t = $m.targets.$target
     if (-not $t.url -or -not $t.sha256) { Fail "no build for $target in $manifest" }
