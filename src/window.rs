@@ -1102,10 +1102,20 @@ impl AppWindow {
 
     /// What installing layouts kept of the person's own, as toasts.
     fn show_layout_notes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        for clone in mods::take_sync_notes() {
-            let n = json!({ "title": format!("Your edits are in {clone}"), "body": "Herdr's own layouts and mods can't be changed: clone one to make it yours.", "level": "info", "timeout": 12000 });
-            self.open_overlay(mods::new_overlay_id(), json!({ "kind": "toast", "notification": n }), window, cx);
+        let clones = mods::take_sync_notes();
+        if clones.is_empty() {
+            return;
         }
+        let preview = clones.iter().take(3).cloned().collect::<Vec<_>>().join(", ");
+        let more = clones.len().saturating_sub(3);
+        let body = if more == 0 { preview } else { format!("{preview} và {more} bản khác") };
+        let n = json!({
+            "title": "Đã giữ lại các tùy chỉnh cũ",
+            "body": format!("Multi Agent Herdr đã lưu bản cũ tại: {body}. Bản tích hợp mới đang được sử dụng."),
+            "level": "info",
+            "timeout": 8000
+        });
+        self.open_overlay(mods::new_overlay_id(), json!({ "kind": "toast", "notification": n }), window, cx);
     }
 
     /// Writes the clicks, with the file they were made on (so a later change
