@@ -1,5 +1,5 @@
 # Builds this checkout and installs it for the current Windows user.
-function Install-HerdrAppFiles($Binary, $Icon, $Destination) {
+function Install-HerdrAppFiles($Binary, $CoreBinary, $Conpty, $Icon, $Destination) {
     $ErrorActionPreference = "Stop"
     $Destination = [IO.Path]::GetFullPath($Destination)
     $stage = "$Destination.install-$([guid]::NewGuid().ToString('N'))"
@@ -8,6 +8,8 @@ function Install-HerdrAppFiles($Binary, $Icon, $Destination) {
     try {
         New-Item -ItemType Directory -Path $stage -Force | Out-Null
         Copy-Item -LiteralPath $Binary -Destination "$stage\multi-agent-herdr.exe"
+        Copy-Item -LiteralPath $CoreBinary -Destination "$stage\multi-agent-herdr-core.exe"
+        Copy-Item -LiteralPath $Conpty -Destination "$stage\conpty" -Recurse
         Copy-Item -LiteralPath $Icon -Destination "$stage\multi-agent-herdr.svg"
         # Renaming the folder leaves an already running app alive.
         if (Test-Path -LiteralPath $Destination) {
@@ -55,8 +57,13 @@ Push-Location "$PSScriptRoot\.."
 try {
     cargo build --release --locked --target-dir target
     if ($LASTEXITCODE) { throw "Herdr build failed (exit $LASTEXITCODE)." }
+    $coreRepo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\multi-agent-herdr-core"))
+    & "$coreRepo\scripts\fetch-conpty.ps1" -Dest "$coreRepo\target\release"
+    if ($LASTEXITCODE) { throw "Core dependencies failed (exit $LASTEXITCODE)." }
+    cargo build --release --locked --manifest-path "$coreRepo\Cargo.toml" -p herdr-core
+    if ($LASTEXITCODE) { throw "Multi Agent Herdr Core build failed (exit $LASTEXITCODE)." }
     $dir = Join-Path $env:LOCALAPPDATA "Programs\multi-agent-herdr"
-    Install-HerdrAppFiles "target\release\herdr-app.exe" "assets\icons\herdr-ui-icon-clean.svg" $dir
+    Install-HerdrAppFiles "target\release\herdr-app.exe" "$coreRepo\target\release\herdr-core.exe" "$coreRepo\target\release\conpty" "assets\icons\herdr-ui-icon-clean.svg" $dir
 } finally {
     Pop-Location
 }

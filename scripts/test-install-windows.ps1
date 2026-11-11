@@ -9,16 +9,22 @@ $tmp = Join-Path ([IO.Path]::GetTempPath()) "herdr-install-test-$([guid]::NewGui
 New-Item -ItemType Directory -Path $tmp | Out-Null
 try {
     $binary = Join-Path $tmp "build.exe"
+    $core = Join-Path $tmp "core.exe"
+    $conpty = Join-Path $tmp "conpty"
     $icon = Join-Path $tmp "icon.svg"
     $destination = Join-Path $tmp "Programs\herdr-app"
     Set-Content -LiteralPath $binary -Value "first build"
+    Set-Content -LiteralPath $core -Value "core build"
+    New-Item -ItemType Directory -Path $conpty | Out-Null
+    Set-Content -LiteralPath (Join-Path $conpty "conpty.dll") -Value "conpty"
     Set-Content -LiteralPath $icon -Value "icon"
-    Install-HerdrAppFiles $binary $icon $destination
+    Install-HerdrAppFiles $binary $core $conpty $icon $destination
     Assert ((Get-Content "$destination\multi-agent-herdr.exe") -eq "first build") "First install lost the binary"
     Assert ((Get-Content "$destination\multi-agent-herdr.svg") -eq "icon") "First install lost the icon"
+    Assert ((Get-Content "$destination\multi-agent-herdr-core.exe") -eq "core build") "First install lost the core"
 
     Set-Content -LiteralPath $binary -Value "new build"
-    Install-HerdrAppFiles $binary $icon $destination
+    Install-HerdrAppFiles $binary $core $conpty $icon $destination
     Assert ((Get-Content "$destination\multi-agent-herdr.exe") -eq "new build") "Replacement kept the old binary"
     Assert ((Get-ChildItem (Split-Path $destination)).Count -eq 1) "Replacement left temporary files"
 
@@ -33,7 +39,7 @@ try {
         $script:moves = 0
         $script:failMoves = $failures
         $errorText = $null
-        try { Install-HerdrAppFiles $binary $icon $destination }
+        try { Install-HerdrAppFiles $binary $core $conpty $icon $destination }
         catch { $errorText = $_.ToString() }
         Assert ($null -ne $errorText) "Failed installation reported success"
         if ($failures.Count -eq 1) {

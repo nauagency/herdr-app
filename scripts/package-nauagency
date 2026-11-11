@@ -27,6 +27,12 @@ done
 
 echo "package-nauagency: Multi Agent Herdr $version for $os-$arch"
 HERDR_APP_RELEASE=1 cargo build --release --locked
+core_repo=${NAU_CORE_SOURCE:-../multi-agent-herdr-core}
+[[ -f "$core_repo/crates/herdr-core/Cargo.toml" ]] || { echo "package-nauagency: missing Multi Agent Herdr Core at $core_repo" >&2; exit 1; }
+if [[ $os == windows ]]; then
+  powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$core_repo/scripts/fetch-conpty.ps1")" -Dest "$(cygpath -w "$core_repo/target/release")"
+fi
+cargo build --release --locked --manifest-path "$core_repo/Cargo.toml" -p herdr-core
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir -p dist
@@ -35,6 +41,8 @@ if [[ $os == windows ]]; then
   dir="$work/multi-agent-herdr"
   mkdir -p "$dir"
   cp target/release/herdr-app.exe "$dir/multi-agent-herdr.exe"
+  cp "$core_repo/target/release/herdr-core.exe" "$dir/multi-agent-herdr-core.exe"
+  cp -R "$core_repo/target/release/conpty" "$dir/conpty"
   cp assets/icons/herdr-ui-icon-clean.svg "$dir/multi-agent-herdr.svg"
   cp LICENSE THIRD-PARTY-NOTICES "$dir/"
   out="dist/multi-agent-herdr-windows-$arch.zip"

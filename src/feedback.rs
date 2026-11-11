@@ -6,12 +6,6 @@ use std::path::PathBuf;
 pub const MAX_IMAGES: usize = 3;
 const MAX_IMAGE_BYTES: usize = 5 * 1024 * 1024;
 
-const ENDPOINT: &str = "https://telemetry.herdr.dev/v1/feedback";
-
-fn endpoint() -> Option<String> {
-    std::env::var("HERDR_FEEDBACK_URL").ok().filter(|u| !u.is_empty())
-        .or_else(|| option_env!("HERDR_APP_RELEASE").map(|_| ENDPOINT.to_owned()))
-}
 
 pub fn draft(message: &str, email: &str, images: usize, from: &str, layout: &str) -> Value {
     json!({
@@ -92,7 +86,7 @@ fn shot_file(rel: &str) -> Result<PathBuf, String> {
     Ok(path)
 }
 
-pub fn available() -> bool { endpoint().is_some() }
+pub fn available() -> bool { false }
 
 fn validate(body: &Value) -> Result<(), String> {
     let message = body["message"].as_str().unwrap_or_default();
@@ -115,53 +109,8 @@ pub async fn send(body: Value, shots: Vec<String>) -> Result<(), String> {
     if shots.len() > MAX_IMAGES || body["images"].as_u64() != Some(shots.len() as u64) {
         return Err("Up to 3 screenshots.".into());
     }
-    let files = shots.iter().map(|s| shot_file(s)).collect::<Result<Vec<_>, _>>()?;
-    let url = endpoint().ok_or("This build was made from source and doesn't send feedback. Use a release build.")?;
-    let (tx, rx) = async_channel::bounded(1);
-    std::thread::spawn(move || {
-        let result = post(&url, &body.to_string(), &files);
-        if result.is_ok() { clear_shots(); }
-        let _ = tx.send_blocking(result);
-    });
-    rx.recv().await.map_err(|_| "The feedback request was lost.".to_owned())?
-}
-
-/// Text alone goes as JSON (what every version sends); with screenshots, as a
-/// form: the same JSON in `feedback`, each image in `image`.
-fn post(url: &str, body: &str, files: &[PathBuf]) -> Result<(), String> {
-    use std::io::Write;
-    use std::process::Stdio;
-    let null = if cfg!(windows) { "NUL" } else { "/dev/null" };
-    let network = || "Couldn't reach the feedback server. Check your connection and try again.".to_owned();
-    let mut args: Vec<String> = ["-sS", "--max-time", "60", "-X", "POST"].map(String::from).to_vec();
-    if files.is_empty() {
-        args.extend(["-H", "content-type: application/json", "--data-binary", "@-"].map(String::from));
-    } else {
-        args.extend(["-F".into(), "feedback=<-;type=application/json".into()]);
-        for f in files {
-            let kind = if f.extension().is_some_and(|e| e == "png") { "image/png" } else { "image/jpeg" };
-            args.extend(["-F".into(), format!("image=@{};type={kind}", f.display())]);
-        }
-    }
-    args.extend(["-o", null, "-w", "%{http_code}", url].map(String::from));
-    let mut child = crate::spawn::command(crate::update::system("curl"))
-        .args(&args)
-        .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().map_err(|_| network())?;
-    if child.stdin.take().ok_or_else(network)?.write_all(body.as_bytes()).is_err() {
-        let _ = child.kill();
-        let _ = child.wait();
-        return Err(network());
-    }
-    let out = child.wait_with_output().map_err(|_| network())?;
-    if !out.status.success() { return Err(network()); }
-    match String::from_utf8_lossy(&out.stdout).trim() {
-        "204" => Ok(()),
-        "429" => Err("Too many, try in a minute.".into()),
-        "503" => Err("Not taking feedback right now. Try again later.".into()),
-        "400" => Err("The server couldn't accept this feedback. Check the message and email.".into()),
-        "413" => Err("The feedback is too large. Shorten the message or remove a screenshot.".into()),
-        _ => Err("The feedback server returned an unexpected answer. Try again later.".into()),
-    }
+    let _ = shots.iter().map(|s| shot_file(s)).collect::<Result<Vec<_>, _>>()?;
+    Err("Multi Agent Herdr does not send feedback to an external server.".into())
 }
 
 #[cfg(test)]
