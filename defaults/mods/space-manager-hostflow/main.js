@@ -6,7 +6,7 @@ import * as fs from "fs/promises";
 const CONFIG = "space-manager.config.v1";
 const DISMISSED_PROFILE_ALERTS = "space-manager.dismissed-profile-alerts.v1";
 const LEADER_RESPONSE_POLICY = `COMMUNICATION POLICY: Trả lời người dùng bằng tiếng Việt, kết luận trước, ngắn gọn, dễ hiểu và dùng từ phổ thông. Chỉ nêu kết quả, trạng thái, thay đổi quan trọng hoặc đúng quyết định còn thiếu. Không chép prompt, policy, log, lệnh, checkpoint, evidence ID, job ID hay quy trình nội bộ trừ khi người dùng hỏi.`;
-const LEADER_ROLE_POLICY = `LEADER MODEL: Bạn là đầu mối duy nhất giữa người dùng và đội. Hãy hiểu mục tiêu, chia thành các việc độc lập, giao cho worker phù hợp, rồi kết thúc lượt và chờ mailbox chủ động đánh thức; tuyệt đối không poll terminal, không lặp hc read/hc wait và không phát tiến độ vụn. Worker chỉ nhận ngữ cảnh của đúng việc. Khi mọi việc con đã hoàn tất, bạn tự đối chiếu các kết quả, xử lý mâu thuẫn và trả người dùng một kết luận tổng hợp. Với nghiên cứu chỉ đọc, bạn không tự đọc repo thay worker. Với triển khai code, bạn xác định tiêu chí đạt, yêu cầu kiểm tra cục bộ và review bằng chứng trước khi xin duyệt merge/deploy. Worker bị chặn phải báo lại bạn; chỉ bạn mới hỏi người dùng. Không có Host AI trung gian.`;
+const LEADER_ROLE_POLICY = `LEADER MODEL: Bạn là đầu mối duy nhất giữa người dùng và đội. Hãy hiểu mục tiêu và lập kế hoạch một lần. Việc đơn giản có thể route-dispatch trực tiếp; việc có nhiều bước phải ghi một JSON plan gồm idempotencyKey, goal và tasks[{key,title,description,dependsOn,routeMode,maxAttempts,timeoutMinutes,requiresUserApproval}], rồi gọi plan-apply. Từ đó scheduler quyết định thứ tự, dependency và worker; không điều phối giữa chừng bằng prompt. Sau khi giao việc, kết thúc lượt và chờ mailbox chủ động đánh thức; tuyệt đối không poll terminal, không lặp hc read/hc wait và không phát tiến độ vụn. Chỉ dẫn bổ sung cho worker đang bận phải dùng enqueue để xếp hàng. Mọi hành động cần quyền phải dùng request-decision với kind, scope và summary cụ thể; không dùng một xác nhận chung. Worker chỉ nhận ngữ cảnh của đúng việc. Khi mọi việc con đã hoàn tất, tự đối chiếu kết quả, xử lý mâu thuẫn và trả người dùng một kết luận tổng hợp. Với triển khai code, đặt tiêu chí đạt, yêu cầu kiểm tra cục bộ và review bằng chứng trước merge/deploy. Worker bị chặn phải báo Leader; chỉ Leader mới hỏi người dùng. Không có Host AI trung gian.`;
 const FLOW_PROFILES = "space-flow.profiles.v1";
 const FLASH = ["gemini-3.8-flash-high", "gemini-3.8-flash-medium", "gemini-3.8-flash-low"];
 
@@ -163,6 +163,7 @@ export default class SpaceManager extends View {
           // when every worker is busy, and the next refresh assigns queued
           // work to an eligible idle profile without creating a duplicate job.
           await exec("powershell.exe", ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", jobsHelper, "schedule", space.id]);
+          await exec("powershell.exe", ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", jobsHelper, "deliver", space.id]);
           const jobsResult = await exec("powershell.exe", ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", jobsHelper, "list", space.id]);
           this.jobs = parseJsonOutput(jobsResult.stdout);
           const managerTerminal = this.managerTerminal(space);
@@ -373,7 +374,7 @@ export default class SpaceManager extends View {
     const terminal = this.managerTerminal(space);
     if (!terminal) { this.startManager(space); return; }
     const jobsHelper = `${appHome()}/mods/space-manager-hostflow/space-jobs.ps1`;
-    const update = `WORKFLOW POLICY UPDATE. You are the single Leader for Space ${space.id}; there is no separate Host. Allowed worker profiles=[${cfg.executorProfileIds.join(", ")}]. ${LEADER_ROLE_POLICY} Independent jobs may run in parallel. Create each child job with ${jobsHelper} route-dispatch <spaceId> <terminal> <fast-path|leader-first|ask-user> '<short reason>' <task>. After dispatch, end the turn and wait for mailbox delivery. Do not inspect worker terminals. Research jobs finish when all related children report and you synthesize once. Implementation jobs additionally require local gate, evidence and review before user approval. Retry the same job rather than creating duplicates; stop automatic retry after ${cfg.maxExecutorBackups} backups or ${cfg.sameErrorLimit} repeated identical failures. Use only the existing allowed worker profiles; never create an agent or internal subagent. Never switch provider, leave this Space, use paid APIs, touch secrets, merge, deploy or delete data without the user's explicit direction. When your final answer accepts one or more worker results, record the concise reply and close those exact jobs in one idempotent transaction with ${jobsHelper} complete-message ${space.id} <stable-key> <job-id[,job-id...]> <reply>. Use a generic leader.message only for conversation that closes no job. Never close a job merely because any Leader message exists. ${LEADER_RESPONSE_POLICY} Reply only that the Leader workflow is active.`;
+    const update = `WORKFLOW POLICY UPDATE. You are the single Leader for Space ${space.id}; there is no separate Host. Allowed worker profiles=[${cfg.executorProfileIds.join(", ")}]. ${LEADER_ROLE_POLICY} Apply a multi-task plan with ${jobsHelper} plan-apply ${space.id} <plan.json>; use route-dispatch only for one independent task. After dispatch, end the turn and wait for mailbox delivery. Do not inspect worker terminals. Research jobs finish when all related children report and you synthesize once. Implementation jobs additionally require local gate, evidence and review before user approval. Retry the same job rather than creating duplicates; stop automatic retry after ${cfg.maxExecutorBackups} backups or ${cfg.sameErrorLimit} repeated identical failures. Use only the existing allowed worker profiles; never create an agent or internal subagent. Never switch provider, leave this Space, use paid APIs, touch secrets, merge, deploy or delete data without the user's explicit direction. When your final answer accepts one or more worker results, record the concise reply and close those exact jobs in one idempotent transaction with ${jobsHelper} complete-message ${space.id} <stable-key> <job-id[,job-id...]> <reply>. Use a generic leader.message only for conversation that closes no job. Never close a job merely because any Leader message exists. ${LEADER_RESPONSE_POLICY} Reply only that the Leader workflow is active.`;
     try {
       const path = await this.saveHostPolicy(space, update);
       await hc(["send", terminal.address, `Workflow của Space vừa được cập nhật. Hãy đọc và áp dụng file "${path}"; không chép nội dung file ra terminal. Chỉ xác nhận ngắn gọn.`]);
@@ -395,7 +396,7 @@ export default class SpaceManager extends View {
     }
     const jobsHelper = `${appHome()}/mods/space-manager-hostflow/space-jobs.ps1`;
     const executorIds = cfg.executorProfileIds.join(", ");
-    const task = `Bạn là Leader duy nhất của Space "${space.name}" (${space.id}) và là agent người dùng trao đổi trực tiếp. Không có Host AI trung gian. Worker được phép=[${executorIds}]. ${LEADER_ROLE_POLICY} Dùng "${jobsHelper}" route-dispatch ${space.id} <terminal> <fast-path|leader-first|ask-user> '<lý do ngắn>' <task> để tạo từng việc con. Giao tất cả việc độc lập trước, sau đó kết thúc lượt và chờ kết quả được gửi về; không đọc/poll terminal. Với nghiên cứu nhiều repo, mỗi worker đọc một nguồn rồi bạn tổng hợp một lần. Với triển khai, đặt tiêu chí đạt, yêu cầu worktree riêng, checkpoint/evidence, gate cục bộ và review trước khi xin duyệt. Backup chỉ dùng agent đã có trong cùng Space, giữ nguyên jobId/worktree/checkpoint và tối đa ${cfg.maxExecutorBackups} lần. Không tạo agent hay internal subagent, không đổi provider, không dùng API trả phí, không rời Space, không làm trên main, không đụng secret/.env, không tự merge/deploy/xoá dữ liệu. Khi câu trả lời cuối chấp nhận kết quả worker, ghi câu trả lời và đóng đúng các job trong một giao dịch bằng "${jobsHelper}" complete-message ${space.id} <khóa-ổn-định> <job-id[,job-id...]> <nội dung ngắn gọn>. Chỉ dùng message leader.message cho trao đổi không đóng job; không được suy đoán đóng job từ một tin nhắn chung. ${LEADER_RESPONSE_POLICY}`;
+    const task = `Bạn là Leader duy nhất của Space "${space.name}" (${space.id}) và là agent người dùng trao đổi trực tiếp. Không có Host AI trung gian. Worker được phép=[${executorIds}]. ${LEADER_ROLE_POLICY} Dùng "${jobsHelper}" plan-apply ${space.id} <plan.json> cho mục tiêu nhiều việc; chỉ dùng route-dispatch cho một việc độc lập. Sau khi tạo plan, kết thúc lượt và chờ kết quả; không đọc/poll terminal. Với triển khai, đặt tiêu chí đạt, yêu cầu worktree riêng, checkpoint/evidence, gate cục bộ và review trước khi xin duyệt. Backup chỉ dùng agent đã có trong cùng Space, giữ nguyên jobId/worktree/checkpoint và tối đa ${cfg.maxExecutorBackups} lần. Không tạo agent hay internal subagent, không đổi provider, không dùng API trả phí, không rời Space, không làm trên main, không đụng secret/.env, không tự merge/deploy/xoá dữ liệu. Khi câu trả lời cuối chấp nhận kết quả worker, ghi câu trả lời và đóng đúng các job trong một giao dịch bằng "${jobsHelper}" complete-message ${space.id} <khóa-ổn-định> <job-id[,job-id...]> <nội dung ngắn gọn>. Chỉ dùng message leader.message cho trao đổi không đóng job; không được suy đoán đóng job từ một tin nhắn chung. ${LEADER_RESPONSE_POLICY}`;
     const selectedLive = !forceStart && cfg.profileId ? terminals().find(t => t.labels?.["herdr.profile"] === cfg.profileId) : null;
     if (selectedLive) {
       const requested = selectedLive.labels?.["herdr.model.requested"];
@@ -590,7 +591,7 @@ export default class SpaceManager extends View {
     const t = theme();
     const lifecycle = profile.loginState === "waiting" ? "awaiting-user" : profile.loginState === "failed" ? "error" : profile.lifecycle;
     const runtimeStatus = liveAgent?.status ?? (liveTerminal || profile.running ? "working" : "blocked");
-    const job = [...this.jobs].reverse().find(row => row.assigneeProfile === profile.id && !["completed", "failed"].includes(row.status));
+    const job = [...this.jobs].reverse().find(row => row.assigneeProfile === profile.id && !["completed", "failed", "skipped", "abandoned"].includes(row.status));
     const jobStatus = job?.status;
     const routedStatus = jobStatus === "needs-review" ? "done"
       : jobStatus === "needs-input" ? "blocked"
@@ -634,7 +635,7 @@ export default class SpaceManager extends View {
     const t = theme();
     const lifecycle = profile.loginState === "waiting" ? "awaiting-user" : profile.loginState === "failed" ? "error" : profile.lifecycle;
     const runtimeStatus = liveAgent?.status ?? (liveTerminal || profile.running ? "working" : "blocked");
-    const job = [...this.jobs].reverse().find(row => row.assigneeProfile === profile.id && !["completed", "failed"].includes(row.status));
+    const job = [...this.jobs].reverse().find(row => row.assigneeProfile === profile.id && !["completed", "failed", "skipped", "abandoned"].includes(row.status));
     const routedStatus = job?.status === "needs-review" ? "done"
       : job?.status === "needs-input" ? "blocked"
       : job && ["queued", "working", "checking"].includes(job.status) ? "working" : runtimeStatus;
@@ -649,14 +650,15 @@ export default class SpaceManager extends View {
   jobCard(job) {
     const t = theme();
     const needsUser = job.status === "needs-input" || job.status === "awaiting-approval";
-    const title = needsUser ? "Cần bạn" : ({ queued: "Đang chờ agent", checking: "Đang kiểm tra", "needs-review": "Chờ Leader tổng hợp", "awaiting-approval": "Chờ bạn xác nhận" }[job.status] ?? "Đang làm");
+    const title = needsUser ? "Cần bạn" : ({ blocked: "Chờ việc trước", queued: "Đang chờ agent", checking: "Đang kiểm tra", "needs-review": "Chờ Leader tổng hợp", "awaiting-approval": "Chờ bạn xác nhận", skipped: "Đã bỏ qua", abandoned: "Đã dừng giao việc" }[job.status] ?? "Đang làm");
     const handoff = [job.previousAssignees ?? [], job.assignee ? [job.assignee] : []].flat().filter(Boolean).join(" → ");
     return v_flex().id(`job-${job.id}`).mx(1).px(9).py(7).gap(2).rounded(8).border_1().border_color(needsUser ? t.blocked : t.border).bg(t.surface)
       .when(Boolean(job.assignee), el => el.cursor_pointer().on_click(() => showAgentTerminal(job.assignee)))
       .child(h_flex().items_center().justify_between()
         .child(div().text_size(10.5).font_semibold().text_color(needsUser ? t.blocked : t.working).child(title))
         .child(div().text_size(9.5).text_color(t.dim).child(job.assignee || "Chờ Leader phân công")))
-      .child(div().truncate().text_size(11).text_color(t.foreground).child(job.result || job.task))
+      .child(div().truncate().text_size(11).text_color(t.foreground).child(job.title || job.result || job.task))
+      .when(asArray(job.dependsOn).length > 0, el => el.child(div().truncate().text_size(9).text_color(t.dim).child(`Sau: ${asArray(job.dependsOn).join(", ")}`)))
       .child(this.jobSteps(job))
       .child(div().truncate().text_size(9).text_color(t.dim)
         .child(`${job.contextProfile === "lean" ? "Lean" : "Full"} · ${asArray(job.checkpoints).length} checkpoint · ${asArray(job.evidence).length} bằng chứng · ${asArray(job.artifacts).length} sản phẩm · ${asArray(job.reviewFindings).filter(f => f.status === "open").length} review mở`))
@@ -700,8 +702,8 @@ export default class SpaceManager extends View {
   askApproveJob(job) {
     this.pendingApproval = job;
     openOverlay({ mod: "confirm", kind: "dialog", width: 450, height: 230, props: {
-      title: `Xác nhận cho ${job.id}?`,
-      detail: "Xác nhận chỉ cho phép Leader tiếp tục hành động đang chờ. App không tự merge, deploy hoặc xoá dữ liệu.",
+      title: `Xác nhận ${job.pendingDecision?.kind || "hành động"}?`,
+      detail: job.pendingDecision ? `${job.pendingDecision.summary}\nPhạm vi: ${job.pendingDecision.scope}` : "Xác nhận chỉ cho phép Leader tiếp tục đúng hành động đang chờ.",
       command: { name: "space-manager-hostflow.approve-job" },
     }});
   }
@@ -714,8 +716,9 @@ export default class SpaceManager extends View {
     if (!job || !space || !manager) return;
     const helper = `${appHome()}/mods/space-manager-hostflow/space-jobs.ps1`;
     try {
-      await exec("powershell.exe", ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", helper, "update", space.id, job.id, "working", "User approved the pending action."]);
-      await hc(["send", manager.address, `Người dùng đã xác nhận hành động đang chờ của jobId=${job.id}. Tiếp tục đúng phạm vi đã duyệt; báo lại kết quả và không mở rộng sang hành động khác.`]);
+      if (!job.pendingDecision?.id) throw new Error("Yêu cầu xác nhận cũ không có phạm vi cụ thể. Hãy để agent tạo lại yêu cầu.");
+      await exec("powershell.exe", ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", helper, "decide", space.id, job.id, job.pendingDecision.id, "approve", "Bạn"]);
+      await hc(["send", manager.address, `Người dùng đã xác nhận decisionId=${job.pendingDecision.id} của jobId=${job.id}. Chỉ tiếp tục đúng phạm vi đã ghi; không mở rộng sang hành động khác.`]);
     } catch (e) { notify({ title: "Chưa xác nhận được", body: String(e.message ?? e), level: "warning" }); }
     this.refresh(cx);
   }
@@ -726,8 +729,9 @@ export default class SpaceManager extends View {
     if (!space || !manager) return;
     (async () => {
       const helper = `${appHome()}/mods/space-manager-hostflow/space-jobs.ps1`;
-      await exec("powershell.exe", ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", helper, "update", space.id, job.id, "working", "User denied the pending action."]);
-      await hc(["send", manager.address, `Người dùng từ chối hành động đang chờ của jobId=${job.id}. Không thực hiện hành động đó; điều chỉnh kế hoạch hoặc tổng hợp để hỏi lại.`]);
+      if (!job.pendingDecision?.id) throw new Error("Yêu cầu xác nhận cũ không có phạm vi cụ thể. Hãy để agent tạo lại yêu cầu.");
+      await exec("powershell.exe", ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", helper, "decide", space.id, job.id, job.pendingDecision.id, "deny", "Bạn"]);
+      await hc(["send", manager.address, `Người dùng từ chối decisionId=${job.pendingDecision.id} của jobId=${job.id}. Không thực hiện hành động đó; điều chỉnh kế hoạch.`]);
     })().catch(e => notify({ title: "Chưa gửi được quyết định", body: String(e.message ?? e), level: "warning" }));
   }
 
@@ -782,7 +786,7 @@ export default class SpaceManager extends View {
       if (!agentFilter) return true;
       const address = live?.terminal?.address || live?.agent?.address || profile.liveAgent?.address || "";
       const related = this.jobs.filter(job => job.assigneeProfile === profile.id || (address && job.assignee === address));
-      const open = related.filter(job => !["completed", "failed"].includes(job.status));
+      const open = related.filter(job => !["completed", "failed", "skipped", "abandoned"].includes(job.status));
       const runtimeStatus = live?.agent?.status || profile.liveAgent?.status || "idle";
       if (agentFilter === "running") return runtimeStatus === "working" || open.some(job => ["queued", "working", "checking"].includes(job.status));
       if (agentFilter === "queued") return open.some(job => job.status === "queued");

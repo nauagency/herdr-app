@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory, Position = 0)][ValidateSet("list", "mailbox", "message", "complete-message", "create", "dispatch", "route-dispatch", "auto-dispatch", "schedule", "route", "update", "reassign", "recover", "gate", "artifact", "checkpoint", "evidence", "review", "resolve-review")][string]$Action,
+    [Parameter(Mandatory, Position = 0)][ValidateSet("list", "events", "mailbox", "message", "complete-message", "plan-apply", "create", "dispatch", "route-dispatch", "auto-dispatch", "schedule", "route", "update", "request-decision", "decide", "enqueue", "deliver", "abandon", "reassign", "recover", "gate", "artifact", "checkpoint", "evidence", "review", "resolve-review")][string]$Action,
     [Parameter(Mandatory, Position = 1)][ValidateNotNullOrEmpty()][string]$SpaceId,
     [Parameter(Position = 2, ValueFromRemainingArguments)][string[]]$Values = @()
 )
@@ -23,6 +23,7 @@ New-Item -ItemType Directory -Path $jobsRoot -Force | Out-Null
 $safeSpace = $SpaceId -replace '[^A-Za-z0-9._-]', '-'
 $file = Join-Path $jobsRoot "$safeSpace.json"
 $mailboxFile = Join-Path $jobsRoot "$safeSpace-mailbox.json"
+$eventsFile = Join-Path $jobsRoot "$safeSpace-events.jsonl"
 $policyFile = Join-Path (Join-Path $root "workflow-policies") "$safeSpace.json"
 
 function Read-Policy {
@@ -56,6 +57,38 @@ function Read-Mailbox {
     return @()
 }
 function Save-Mailbox($Rows) { Save-JsonAtomic $mailboxFile $Rows 6 }
+function Get-LastEventHash {
+    try {
+        $last = Get-Content -LiteralPath $eventsFile -Tail 1 -Encoding UTF8 -ErrorAction Stop
+        if ($last) { return [string](($last | ConvertFrom-Json).hash) }
+    } catch {}
+    return ""
+}
+function Write-ControlEvent([string]$Type, [string]$JobId, [string]$Actor, $Data, [string]$CreatedAt) {
+    $previousHash = Get-LastEventHash
+    $body = [ordered]@{
+        id = "event-{0}" -f ([guid]::NewGuid().ToString("N").Substring(0, 12))
+        schemaVersion = 1; spaceId = $SpaceId; type = $Type; jobId = $JobId
+        actor = $Actor; createdAt = $CreatedAt; previousHash = $previousHash; data = $Data
+    }
+    $canonical = ConvertTo-Json -InputObject $body -Compress -Depth 12
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { $hash = ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($canonical))) -replace '-', '').ToLowerInvariant() }
+    finally { $sha.Dispose() }
+    $event = [ordered]@{}
+    foreach ($entry in $body.GetEnumerator()) { $event[$entry.Key] = $entry.Value }
+    $event.hash = $hash
+    Add-Content -LiteralPath $eventsFile -Value (ConvertTo-Json -InputObject $event -Compress -Depth 12) -Encoding UTF8
+    return [pscustomobject]$event
+}
+function Read-ControlEvents([int]$Limit = 300) {
+    if (-not (Test-Path -LiteralPath $eventsFile)) { return @() }
+    $rows = @()
+    foreach ($line in @(Get-Content -LiteralPath $eventsFile -Tail $Limit -Encoding UTF8)) {
+        try { if ($line) { $rows += ($line | ConvertFrom-Json) } } catch {}
+    }
+    return @($rows)
+}
 function Add-Mailbox([string]$Type, [string]$From, [string]$To, [string]$JobId, [string]$Summary, [string]$CreatedAt) {
     $rows = @(Read-Mailbox)
     $rows += [pscustomobject]@{
@@ -67,6 +100,43 @@ function Add-Mailbox([string]$Type, [string]$From, [string]$To, [string]$JobId, 
 function Set-Field($Object, [string]$Name, $Value) {
     if ($null -ne $Object.PSObject.Properties[$Name]) { $Object.$Name = $Value }
     else { $Object | Add-Member -MemberType NoteProperty -Name $Name -Value $Value }
+}
+function Add-Attempt($Job, [string]$Address, [string]$Profile, [string]$Now, [string]$Reason) {
+    $attempts = @($Job.attempts)
+    foreach ($attempt in @($attempts | Where-Object { [string]$_.status -eq "active" })) {
+        Set-Field $attempt "status" "superseded"; Set-Field $attempt "endedAt" $Now
+    }
+    $number = [math]::Max(1, [int]$Job.attempt)
+    $entry = [pscustomobject]@{
+        id = "attempt-{0}" -f ([guid]::NewGuid().ToString("N").Substring(0, 10)); number = $number
+        assignee = $Address; profile = $Profile; status = "active"; reason = $Reason; startedAt = $Now; endedAt = ""
+    }
+    Set-Field $Job "attempts" @($attempts + $entry | Select-Object -Last 20)
+    Set-Field $Job "activeAttemptId" $entry.id
+    return $entry
+}
+function Close-ActiveAttempt($Job, [string]$Status, [string]$Now) {
+    foreach ($attempt in @($Job.attempts | Where-Object { [string]$_.id -eq [string]$Job.activeAttemptId })) {
+        Set-Field $attempt "status" $Status; Set-Field $attempt "endedAt" $Now
+    }
+}
+function Refresh-DependencyStates($Rows, [string]$Now) {
+    $changed = $false
+    foreach ($job in @($Rows | Where-Object { [string]$_.status -eq "blocked" -and [string]$_.planId })) {
+        $dependencies = @($job.dependsOn)
+        $resolved = @($Rows | Where-Object { [string]$_.planId -eq [string]$job.planId -and [string]$_.taskKey -in $dependencies })
+        if ($resolved.Count -ne $dependencies.Count) { continue }
+        if (@($resolved | Where-Object { [string]$_.status -in @("failed", "skipped", "abandoned") }).Count) {
+            Set-Field $job "status" "skipped"; Set-Field $job "stage" "done"
+            Set-Field $job "result" "Skipped because a dependency did not complete successfully."
+            Set-Field $job "updatedAt" $Now; $changed = $true
+        } elseif (-not @($resolved | Where-Object { [string]$_.status -ne "completed" }).Count) {
+            Set-Field $job "status" "queued"; Set-Field $job "stage" "execution"
+            Set-Field $job "recoveryNote" "All dependencies completed; released by the deterministic scheduler."
+            Set-Field $job "updatedAt" $Now; $changed = $true
+        }
+    }
+    return $changed
 }
 function Get-Terminal([string]$Address) {
     try { $raw = (& hc get $Address 2>$null | Out-String).Trim(); if ($raw) { return $raw | ConvertFrom-Json } } catch {}
@@ -137,20 +207,24 @@ function Find-SpaceLead {
 }
 function New-Job([string]$Address, [string]$Task, $Terminal, [string]$Now, [string]$RouteMode = "unclassified", [string]$RouteReason = "") {
     [pscustomobject]@{
-        schemaVersion = 3; id = "job-{0}-{1}" -f (Get-Date -Format "yyyyMMddHHmmss"), ([guid]::NewGuid().ToString("N").Substring(0, 6)); spaceId = $SpaceId
+        schemaVersion = 4; id = "job-{0}-{1}" -f (Get-Date -Format "yyyyMMddHHmmss"), ([guid]::NewGuid().ToString("N").Substring(0, 6)); spaceId = $SpaceId
+        runId = "run-{0}" -f ([guid]::NewGuid().ToString("N").Substring(0, 10)); planId = ""; taskKey = ""; title = ""; dependsOn = @()
         requestedBy = "leader"; assignee = $Address; assigneeProfile = [string]$Terminal.labels.'herdr.profile'; assigneeProvider = [string]$Terminal.labels.'herdr.engine.provider'
         status = "queued"; stage = "execution"; task = $Task; result = ""; attempt = 1; resumeCount = 0; backupCount = 0; reviewRound = 0; sameErrorCount = 0; lastGateError = ""
         previousAssignees = @(); recoveryNote = ""; gateStatus = "pending"; artifacts = @(); checkpoints = @(); evidence = @(); reviewFindings = @()
+        attempts = @(); activeAttemptId = ""; decisions = @(); pendingDecision = $null; queuedMessages = @(); maxAttempts = 3; timeoutMinutes = 0
         contextProfile = "lean"; executionMode = "local-only"; requiresUserApproval = $true
         routeMode = $RouteMode; routeReason = $RouteReason; routedAt = $Now; createdAt = $Now; updatedAt = $Now
     }
 }
 function New-QueuedJob([string]$Task, [string]$Now, [string]$RouteMode = "lead-first", [string]$RouteReason = "") {
     [pscustomobject]@{
-        schemaVersion = 3; id = "job-{0}-{1}" -f (Get-Date -Format "yyyyMMddHHmmss"), ([guid]::NewGuid().ToString("N").Substring(0, 6)); spaceId = $SpaceId
+        schemaVersion = 4; id = "job-{0}-{1}" -f (Get-Date -Format "yyyyMMddHHmmss"), ([guid]::NewGuid().ToString("N").Substring(0, 6)); spaceId = $SpaceId
+        runId = "run-{0}" -f ([guid]::NewGuid().ToString("N").Substring(0, 10)); planId = ""; taskKey = ""; title = ""; dependsOn = @()
         requestedBy = "leader"; assignee = ""; assigneeProfile = ""; assigneeProvider = ""
         status = "queued"; stage = "execution"; task = $Task; result = ""; attempt = 1; resumeCount = 0; backupCount = 0; reviewRound = 0; sameErrorCount = 0; lastGateError = ""
         previousAssignees = @(); recoveryNote = "Waiting for an eligible worker in this Space."; gateStatus = "pending"; artifacts = @(); checkpoints = @(); evidence = @(); reviewFindings = @()
+        attempts = @(); activeAttemptId = ""; decisions = @(); pendingDecision = $null; queuedMessages = @(); maxAttempts = 3; timeoutMinutes = 0
         contextProfile = "lean"; executionMode = "local-only"; requiresUserApproval = $true
         routeMode = $RouteMode; routeReason = $RouteReason; routedAt = $Now; createdAt = $Now; updatedAt = $Now
     }
@@ -199,6 +273,68 @@ try {
     $jobs = @(Read-Jobs)
     $now = (Get-Date).ToUniversalTime().ToString("o")
     if ($Action -eq "list") { ConvertTo-Json -InputObject $jobs -Compress -Depth 8; exit 0 }
+    if ($Action -eq "events") {
+        $limit = 300; $parsedLimit = 0
+        if ($Values.Count -and [int]::TryParse([string]$Values[0], [ref]$parsedLimit)) { $limit = [math]::Min(2000, [math]::Max(1, $parsedLimit)) }
+        ConvertTo-Json -InputObject @(Read-ControlEvents $limit) -Compress -Depth 12
+        exit 0
+    }
+    if ($Action -eq "plan-apply") {
+        if ($Values.Count -lt 1) { throw "plan-apply requires a JSON plan file path." }
+        $planPath = [IO.Path]::GetFullPath([string]$Values[0])
+        if (-not (Test-Path -LiteralPath $planPath -PathType Leaf)) { throw "Plan file does not exist." }
+        try { $plan = Get-Content -LiteralPath $planPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { throw "Plan file is not valid JSON." }
+        $idempotencyKey = ([string]$plan.idempotencyKey).Trim()
+        if ($idempotencyKey -notmatch '^[A-Za-z0-9._:-]{6,160}$') { throw "Plan idempotencyKey must contain 6 to 160 safe characters." }
+        $existingPlan = @($jobs | Where-Object { [string]$_.planKey -eq $idempotencyKey })
+        if ($existingPlan.Count) { ConvertTo-Json -InputObject $existingPlan -Compress -Depth 10; exit 0 }
+        $specs = @($plan.tasks)
+        if (-not $specs.Count -or $specs.Count -gt 100) { throw "Plan must contain 1 to 100 tasks." }
+        $keys = @($specs | ForEach-Object { ([string]$_.key).Trim() })
+        if (@($keys | Where-Object { $_ -notmatch '^[A-Za-z0-9._-]{1,80}$' }).Count -or @($keys | Select-Object -Unique).Count -ne $keys.Count) {
+            throw "Every task key must be unique and contain only letters, numbers, dot, underscore, or dash."
+        }
+        $indegree = @{}; $dependents = @{}
+        foreach ($key in $keys) { $indegree[$key] = 0; $dependents[$key] = @() }
+        foreach ($spec in $specs) {
+            $key = ([string]$spec.key).Trim(); $dependencies = @($spec.dependsOn | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
+            if ($key -in $dependencies -or @($dependencies | Where-Object { $_ -notin $keys }).Count) { throw "Task '$key' has an invalid dependency." }
+            $dependencies = @($dependencies | Select-Object -Unique)
+            $indegree[$key] = $dependencies.Count
+            foreach ($dependency in $dependencies) { $dependents[$dependency] = @($dependents[$dependency]) + $key }
+        }
+        $ready = [Collections.Generic.Queue[string]]::new()
+        foreach ($key in $keys) { if ([int]$indegree[$key] -eq 0) { $ready.Enqueue($key) } }
+        $visited = 0
+        while ($ready.Count) { $key = $ready.Dequeue(); $visited++; foreach ($next in @($dependents[$key])) { $indegree[$next] = [int]$indegree[$next] - 1; if ([int]$indegree[$next] -eq 0) { $ready.Enqueue($next) } } }
+        if ($visited -ne $keys.Count) { throw "Plan dependency graph contains a cycle." }
+
+        $planId = "plan-{0}" -f ([guid]::NewGuid().ToString("N").Substring(0, 10))
+        $runId = "run-{0}" -f ([guid]::NewGuid().ToString("N").Substring(0, 10))
+        $created = @()
+        foreach ($spec in $specs) {
+            $key = ([string]$spec.key).Trim(); $title = ([string]$spec.title).Trim(); $description = ([string]$spec.description).Trim()
+            if (-not $title -or $title.Length -gt 200 -or -not $description -or $description.Length -gt 12000) { throw "Task '$key' needs a title and description within bounds." }
+            $dependencies = @($spec.dependsOn | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ } | Select-Object -Unique)
+            $routeMode = ([string]$spec.routeMode).Trim(); if (-not $routeMode) { $routeMode = "lead-first" }
+            if ($routeMode -notin @("fast-path", "lead-first", "ask-user")) { throw "Task '$key' has an invalid routeMode." }
+            $job = New-QueuedJob $description $now $routeMode "Created from an approved structured plan."
+            Set-Field $job "runId" $runId; Set-Field $job "planId" $planId; Set-Field $job "planKey" $idempotencyKey
+            Set-Field $job "taskKey" $key; Set-Field $job "title" $title; Set-Field $job "dependsOn" $dependencies
+            Set-Field $job "status" $(if ($dependencies.Count) { "blocked" } else { "queued" })
+            Set-Field $job "stage" $(if ($dependencies.Count) { "planning" } else { "execution" })
+            if ($null -ne $spec.maxAttempts) { Set-Field $job "maxAttempts" ([math]::Min(10, [math]::Max(1, [int]$spec.maxAttempts))) }
+            if ($null -ne $spec.timeoutMinutes) { Set-Field $job "timeoutMinutes" ([math]::Min(1440, [math]::Max(0, [int]$spec.timeoutMinutes))) }
+            Set-Field $job "requiresUserApproval" $(if ($null -ne $spec.requiresUserApproval) { [bool]$spec.requiresUserApproval } else { $true })
+            $created += $job
+        }
+        $jobs = @($jobs + $created) | Select-Object -Last 500
+        Save-Jobs $jobs
+        Write-ControlEvent "plan.applied" "" "Leader" ([pscustomobject]@{ planId = $planId; runId = $runId; planKey = $idempotencyKey; goal = [string]$plan.goal; taskKeys = $keys }) $now | Out-Null
+        foreach ($job in $created) { Write-ControlEvent "task.created" $job.id "Leader" ([pscustomobject]@{ planId = $planId; taskKey = $job.taskKey; dependsOn = $job.dependsOn; status = $job.status }) $now | Out-Null }
+        ConvertTo-Json -InputObject $created -Compress -Depth 10
+        exit 0
+    }
     if ($Action -eq "mailbox") {
         $mail = @(Read-Mailbox)
         if (-not $mail.Count) {
@@ -257,8 +393,11 @@ try {
             Set-Field $job "leadDecisionAt" $now
             Set-Field $job "userResponseId" $responseId
             Set-Field $job "updatedAt" $now
+            Close-ActiveAttempt $job "completed" $now
             if ([string]$job.result -notmatch '(?i)lead=approved') { Set-Field $job "result" (([string]$job.result).Trim() + "; lead=approved") }
+            Write-ControlEvent "task.completed" ([string]$job.id) "Leader" ([pscustomobject]@{ responseId = $responseId; idempotencyKey = $idempotencyKey }) $now | Out-Null
         }
+        [void](Refresh-DependencyStates $jobs $now)
         Save-Jobs $jobs
 
         if ($null -eq $existingResponse) {
@@ -281,6 +420,87 @@ try {
         [pscustomobject]@{ responseId = $responseId; idempotencyKey = $idempotencyKey; completedJobIds = $jobIds; response = $content } | ConvertTo-Json -Compress -Depth 5
         exit 0
     }
+    if ($Action -eq "request-decision") {
+        if ($Values.Count -lt 4) { throw "request-decision requires a job id, kind, scope, and summary." }
+        $jobId, $kind, $scope = [string]$Values[0], ([string]$Values[1]).ToLowerInvariant(), [string]$Values[2]
+        $summary = ($Values[3..($Values.Count - 1)] -join " ").Trim()
+        if ($kind -notin @("merge", "deploy", "delete", "external-write", "permission", "product-choice", "other")) { throw "Unsupported decision kind." }
+        if (-not $scope -or $scope.Length -gt 1000 -or -not $summary -or $summary.Length -gt 4000) { throw "Decision scope or summary is invalid." }
+        $job = $jobs | Where-Object id -eq $jobId | Select-Object -First 1
+        if ($null -eq $job -or [string]$job.status -in @("completed", "failed", "skipped", "abandoned")) { throw "Job is not active." }
+        if ($null -ne $job.pendingDecision -and [string]$job.pendingDecision.status -eq "pending") { throw "This job already has a pending decision." }
+        $decision = [pscustomobject]@{ id = "decision-{0}" -f ([guid]::NewGuid().ToString("N").Substring(0, 10)); kind = $kind; scope = $scope; summary = $summary; status = "pending"; requestedBy = [string]$job.assignee; requestedAt = $now; decidedBy = ""; decidedAt = ""; note = ""; previousStatus = [string]$job.status; previousStage = [string]$job.stage }
+        Set-Field $job "pendingDecision" $decision; Set-Field $job "status" "awaiting-approval"; Set-Field $job "stage" "approval"; Set-Field $job "updatedAt" $now
+        Save-Jobs $jobs
+        Write-ControlEvent "decision.requested" $jobId ([string]$job.assignee) $decision $now | Out-Null
+        Add-Mailbox "decision.requested" ([string]$job.assignee) "Bạn" $jobId "$kind · $scope · $summary" $now
+        $decision | ConvertTo-Json -Compress -Depth 8
+        exit 0
+    }
+    if ($Action -eq "decide") {
+        if ($Values.Count -lt 4) { throw "decide requires a job id, decision id, approve|deny, and actor." }
+        $jobId, $decisionId, $verdict, $actor = [string]$Values[0], [string]$Values[1], ([string]$Values[2]).ToLowerInvariant(), [string]$Values[3]
+        $note = if ($Values.Count -gt 4) { ($Values[4..($Values.Count - 1)] -join " ").Trim() } else { "" }
+        if ($verdict -notin @("approve", "deny") -or -not $actor -or $actor.Length -gt 200 -or $note.Length -gt 2000) { throw "Decision verdict, actor, or note is invalid." }
+        $job = $jobs | Where-Object id -eq $jobId | Select-Object -First 1
+        if ($null -eq $job) { throw "Unknown job id." }
+        $pending = $job.pendingDecision
+        if ($null -eq $pending -or [string]$pending.id -ne $decisionId -or [string]$pending.status -ne "pending") { throw "The exact pending decision was not found." }
+        Set-Field $pending "status" $(if ($verdict -eq "approve") { "approved" } else { "denied" }); Set-Field $pending "decidedBy" $actor; Set-Field $pending "decidedAt" $now; Set-Field $pending "note" $note
+        Set-Field $job "decisions" @(@($job.decisions) + $pending | Select-Object -Last 40); Set-Field $job "pendingDecision" $null
+        $decisionSummary = "Decision $verdict for '$([string]$pending.scope)'."
+        if ($note) { $decisionSummary += " $note" }
+        $restoreStatus = if ([string]$pending.previousStatus -and [string]$pending.previousStatus -ne "awaiting-approval") { [string]$pending.previousStatus } else { "working" }
+        $restoreStage = if ([string]$pending.previousStage -and [string]$pending.previousStage -ne "approval") { [string]$pending.previousStage } else { "execution" }
+        Set-Field $job "status" $restoreStatus; Set-Field $job "stage" $restoreStage; Set-Field $job "result" $decisionSummary; Set-Field $job "updatedAt" $now
+        Save-Jobs $jobs
+        Write-ControlEvent "decision.$verdict" $jobId $actor $pending $now | Out-Null
+        Add-Mailbox "decision.$verdict" $actor "Leader" $jobId "$([string]$pending.kind) · $([string]$pending.scope)" $now
+        [pscustomobject]@{ jobId = $jobId; decision = $pending; status = $job.status } | ConvertTo-Json -Compress -Depth 8
+        exit 0
+    }
+    if ($Action -eq "enqueue") {
+        if ($Values.Count -lt 2) { throw "enqueue requires a job id and a message." }
+        $jobId = [string]$Values[0]; $message = ($Values[1..($Values.Count - 1)] -join " ").Trim()
+        if (-not $message -or $message.Length -gt 12000) { throw "Queued message must contain 1 to 12000 characters." }
+        $job = $jobs | Where-Object id -eq $jobId | Select-Object -First 1
+        if ($null -eq $job -or [string]$job.status -in @("completed", "failed", "skipped", "abandoned")) { throw "Job is not active." }
+        $entry = [pscustomobject]@{ id = "queue-{0}" -f ([guid]::NewGuid().ToString("N").Substring(0, 10)); text = $message; status = "pending"; createdAt = $now; deliveredAt = "" }
+        Set-Field $job "queuedMessages" @(@($job.queuedMessages) + $entry | Select-Object -Last 50); Set-Field $job "updatedAt" $now
+        Save-Jobs $jobs; Write-ControlEvent "message.queued" $jobId "Leader" $entry $now | Out-Null
+        $entry | ConvertTo-Json -Compress -Depth 6
+        exit 0
+    }
+    if ($Action -eq "deliver") {
+        $delivered = @()
+        foreach ($job in @($jobs | Where-Object { $_.assignee -and [string]$_.status -in @("queued", "working", "checking") })) {
+            $terminal = Get-Terminal ([string]$job.assignee)
+            if ($null -eq $terminal -or [string]$terminal.state -ne "live" -or [string]$terminal.status.state -eq "working") { continue }
+            foreach ($entry in @($job.queuedMessages | Where-Object { [string]$_.status -eq "pending" })) {
+                try {
+                    Send-TerminalMessage ([string]$job.assignee) "QUEUED STEERING for jobId=$($job.id): $([string]$entry.text)"
+                    Set-Field $entry "status" "delivered"; Set-Field $entry "deliveredAt" $now; $delivered += $entry
+                    Write-ControlEvent "message.delivered" ([string]$job.id) "Scheduler" ([pscustomobject]@{ queueId = $entry.id; assignee = [string]$job.assignee }) $now | Out-Null
+                } catch { break }
+            }
+        }
+        if ($delivered.Count) { Save-Jobs $jobs }
+        ConvertTo-Json -InputObject $delivered -Compress -Depth 6
+        exit 0
+    }
+    if ($Action -eq "abandon") {
+        if ($Values.Count -lt 2) { throw "abandon requires a job id and reason." }
+        $jobId = [string]$Values[0]; $reason = ($Values[1..($Values.Count - 1)] -join " ").Trim()
+        if (-not $reason -or $reason.Length -gt 4000) { throw "Abandon reason is invalid." }
+        $job = $jobs | Where-Object id -eq $jobId | Select-Object -First 1
+        if ($null -eq $job -or [string]$job.status -in @("completed", "failed", "skipped", "abandoned")) { throw "Job is not active." }
+        Close-ActiveAttempt $job "fenced" $now
+        Set-Field $job "status" "abandoned"; Set-Field $job "stage" "done"; Set-Field $job "result" $reason; Set-Field $job "updatedAt" $now
+        [void](Refresh-DependencyStates $jobs $now)
+        Save-Jobs $jobs; Write-ControlEvent "task.abandoned" $jobId "Leader" ([pscustomobject]@{ reason = $reason; note = "This fences the assignment but does not claim the process stopped." }) $now | Out-Null
+        $job | ConvertTo-Json -Compress -Depth 8
+        exit 0
+    }
     if ($Action -eq "recover") {
         $policy = Read-Policy
         $resumeLimit = if ($null -ne $policy.limits.autoResumeLimit) { [int]$policy.limits.autoResumeLimit } else { 1 }
@@ -289,12 +509,14 @@ try {
         $changed = $false
         $jobs = @($jobs | ForEach-Object {
             if ($_.status -in @("queued", "working") -and $_.assignee -and -not $live.ContainsKey([string]$_.assignee)) {
-                $changed = $true; $resumeCount = if ($null -ne $_.resumeCount) { [int]$_.resumeCount } else { 0 }
+                $changed = $true; $lostAssignee = [string]$_.assignee; $resumeCount = if ($null -ne $_.resumeCount) { [int]$_.resumeCount } else { 0 }
+                Close-ActiveAttempt $_ "lost" $now
                 if ($resumeCount -lt $resumeLimit) {
                     $_.previousAssignees = @($_.previousAssignees) + [string]$_.assignee; $_.assignee = ""; $_.assigneeProfile = ""; $_.status = "queued"
                     $_.resumeCount = $resumeCount + 1; $_.attempt = [math]::Max(1, [int]$_.attempt) + 1; $_.recoveryNote = "Agent stopped; queued once for reassignment after restart."
                 } else { $_.status = "needs-input"; $_.result = "Automatic resume limit reached. User decision is required." }
                 $_.updatedAt = $now
+                Write-ControlEvent "attempt.lost" ([string]$_.id) "Recovery" ([pscustomobject]@{ previousAssignee = $lostAssignee; resumeCount = [int]$_.resumeCount; status = [string]$_.status }) $now | Out-Null
             }
             $_
         })
@@ -323,6 +545,10 @@ try {
     }
 
     if ($Action -eq "schedule") {
+        if (Refresh-DependencyStates $jobs $now) {
+            Save-Jobs $jobs
+            Write-ControlEvent "scheduler.dependencies-refreshed" "" "Scheduler" ([pscustomobject]@{}) $now | Out-Null
+        }
         $assigned = @()
         $reserved = @($jobs | Where-Object { $_.assignee -and $_.status -in @("queued", "working", "checking") } | ForEach-Object { [string]$_.assignee })
         foreach ($job in @($jobs | Where-Object { $_.status -eq "queued" -and -not $_.assignee } | Sort-Object createdAt)) {
@@ -334,10 +560,12 @@ try {
             Set-Field $job "assigneeProvider" ([string]$terminal.labels.'herdr.engine.provider')
             Set-Field $job "recoveryNote" "Assigned by the Herdr scheduler when a worker became available."
             Set-Field $job "updatedAt" $now
+            $attempt = Add-Attempt $job ([string]$candidate.address) ([string]$terminal.labels.'herdr.profile') $now "scheduler-assigned"
             Save-Jobs $jobs
             try {
                 Send-TerminalMessage ([string]$candidate.address) (Get-DispatchMessage $job)
                 Add-Mailbox "task.assigned" "Scheduler" ([string]$candidate.address) $job.id ([string]$job.task) $now
+                Write-ControlEvent "attempt.started" $job.id "Scheduler" ([pscustomobject]@{ attemptId = $attempt.id; assignee = [string]$candidate.address; profile = [string]$terminal.labels.'herdr.profile' }) $now | Out-Null
                 $reserved += [string]$candidate.address
                 $assigned += $job
             } catch {
@@ -345,8 +573,10 @@ try {
                 Set-Field $job "assigneeProfile" ""
                 Set-Field $job "assigneeProvider" ""
                 Set-Field $job "recoveryNote" "Dispatch failed; kept in the durable queue for the next scheduler pass."
+                Close-ActiveAttempt $job "dispatch-failed" $now
                 Set-Field $job "updatedAt" $now
                 Save-Jobs $jobs
+                Write-ControlEvent "attempt.dispatch-failed" $job.id "Scheduler" ([pscustomobject]@{ attemptId = $attempt.id; error = $_.Exception.Message }) $now | Out-Null
                 break
             }
         }
@@ -368,10 +598,13 @@ try {
         } else { $task = ($Values[1..($Values.Count - 1)] -join " ").Trim() }
         if (-not $task) { throw "Task cannot be empty." }
         $terminal = Assert-SpaceWorker $address; $job = New-Job $address $task $terminal $now $routeMode $routeReason
+        $attempt = Add-Attempt $job $address ([string]$terminal.labels.'herdr.profile') $now "leader-assigned"
         $jobs = @($jobs + $job) | Select-Object -Last 300; Save-Jobs $jobs
+        Write-ControlEvent "task.created" $job.id "Leader" ([pscustomobject]@{ runId = $job.runId; routeMode = $job.routeMode; task = $job.task }) $now | Out-Null
         if ($Action -in @("dispatch", "route-dispatch")) {
             Send-TerminalMessage $address (Get-DispatchMessage $job)
             Add-Mailbox "task.assigned" "Leader" $address $job.id $task $now
+            Write-ControlEvent "attempt.started" $job.id "Leader" ([pscustomobject]@{ attemptId = $attempt.id; assignee = $address; profile = [string]$terminal.labels.'herdr.profile' }) $now | Out-Null
         }
         $job | ConvertTo-Json -Compress -Depth 8; exit 0
     }
@@ -608,12 +841,16 @@ try {
         $maxBackups = if ($null -ne $policy.limits.maxExecutorBackups) { [int]$policy.limits.maxExecutorBackups } else { 2 }
         $jobs = @($jobs | ForEach-Object {
             if ($_.id -eq $jobId) {
-                if ($_.status -in @("completed", "failed")) { throw "A finished job cannot be reassigned." }
+                if ($_.status -in @("completed", "failed", "skipped", "abandoned")) { throw "A finished job cannot be reassigned." }
                 $backupCount = if ($null -ne $_.backupCount) { [int]$_.backupCount } else { 0 }
                 if ($backupCount -ge $maxBackups) { throw "Gemini backup limit reached. Stop and ask the user or hand the job to the configured Lead." }
+                if ([int]$_.attempt -ge [int]$_.maxAttempts) { throw "Attempt limit reached. A user decision is required before more work is started." }
                 $found = $true; if ($_.assignee) { $_.previousAssignees = @($_.previousAssignees) + [string]$_.assignee }
+                Close-ActiveAttempt $_ "superseded" $now
                 $_.assignee = $address; $_.assigneeProfile = [string]$terminal.labels.'herdr.profile'; $_.assigneeProvider = [string]$terminal.labels.'herdr.engine.provider'
                 $_.status = "queued"; Set-Field $_ "backupCount" ($backupCount + 1); $_.attempt = [math]::Max(1, [int]$_.attempt) + 1; $_.recoveryNote = $reason; $_.updatedAt = $now
+                $newAttempt = Add-Attempt $_ $address ([string]$terminal.labels.'herdr.profile') $now "leader-reassigned"
+                Write-ControlEvent "attempt.started" ([string]$_.id) "Leader" ([pscustomobject]@{ attemptId = $newAttempt.id; assignee = $address; reason = $reason }) $now | Out-Null
             }
             $_
         })
@@ -625,10 +862,11 @@ try {
 
     if ($Values.Count -lt 2) { throw "update requires a job id and status." }
     $jobId = $Values[0]; $status = $Values[1]
-    if ($status -notin @("queued", "working", "checking", "needs-review", "needs-input", "awaiting-approval", "completed", "failed")) { throw "Invalid job status." }
+    if ($status -notin @("blocked", "queued", "working", "checking", "needs-review", "needs-input", "awaiting-approval", "completed", "failed", "skipped", "abandoned")) { throw "Invalid job status." }
     $found = $false; $detail = if ($Values.Count -gt 2) { $Values[2..($Values.Count - 1)] -join " " } else { "" }
     $allowed = @{
-        queued = @("working", "needs-input", "failed")
+        blocked = @("queued", "skipped", "failed", "abandoned")
+        queued = @("working", "needs-input", "failed", "abandoned")
         working = @("checking", "needs-review", "needs-input", "failed")
         checking = @("working", "needs-review", "needs-input", "failed")
         'needs-review' = @("working", "awaiting-approval", "completed", "needs-input", "failed")
@@ -638,7 +876,7 @@ try {
     $jobs = @($jobs | ForEach-Object {
         if ($_.id -eq $jobId) {
             $found = $true
-            if ($_.status -in @("completed", "failed")) { throw "A finished job cannot be changed." }
+            if ($_.status -in @("completed", "failed", "skipped", "abandoned")) { throw "A finished job cannot be changed." }
             if ($status -ne $_.status -and $status -notin @($allowed[[string]$_.status])) { throw "Invalid job transition: $($_.status) -> $status." }
             $isFastPath = [string]$_.routeMode -eq "fast-path"
             if ($status -eq "needs-review" -and -not $isFastPath -and ($detail -notmatch '(?i)commit=\S+' -or $detail -notmatch '(?i)checks=passed')) {
@@ -664,12 +902,15 @@ try {
             if ($status -eq "checking") { Set-Field $_ "gateStatus" "running" }
             elseif ($status -eq "needs-review") { Set-Field $_ "gateStatus" $(if ($isFastPath) { "not-required" } else { "passed" }); Set-Field $_ "stage" "review" }
             elseif ($status -eq "awaiting-approval") { Set-Field $_ "stage" "approval" }
-            elseif ($status -eq "completed") { Set-Field $_ "stage" "done" }
+            elseif ($status -eq "completed") { Set-Field $_ "stage" "done"; Close-ActiveAttempt $_ "completed" $now }
+            elseif ($status -in @("failed", "skipped", "abandoned")) { Set-Field $_ "stage" "done"; Close-ActiveAttempt $_ $status $now }
         }
         $_
     })
     if (-not $found) { throw "Unknown job id." }
+    if ($status -in @("completed", "failed", "skipped", "abandoned")) { [void](Refresh-DependencyStates $jobs $now) }
     Save-Jobs $jobs
+    Write-ControlEvent "task.$status" $jobId "ControlPlane" ([pscustomobject]@{ detail = $detail }) $now | Out-Null
     $updatedJob = $jobs | Where-Object id -eq $jobId | Select-Object -First 1
     if ($status -in @("needs-review", "needs-input")) {
         $manager = Find-SpaceManager

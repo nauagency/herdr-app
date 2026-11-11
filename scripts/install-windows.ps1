@@ -61,7 +61,7 @@ Push-Location "$PSScriptRoot\.."
 try {
     cargo build --release --locked --target-dir target
     if ($LASTEXITCODE) { throw "Herdr build failed (exit $LASTEXITCODE)." }
-    $coreRepo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\multi-agent-herdr-core"))
+    $coreRepo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\core"))
     & "$coreRepo\scripts\fetch-conpty.ps1" -Dest "$coreRepo\target\release"
     if ($LASTEXITCODE) { throw "Core dependencies failed (exit $LASTEXITCODE)." }
     cargo build --release --locked --manifest-path "$coreRepo\Cargo.toml" -p herdr-core

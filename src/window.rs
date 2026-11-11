@@ -5785,8 +5785,8 @@ export default class Probe extends View {
     #[test]
     fn shipped_layouts_parse_and_show_what_they_promise() {
         let main = super::default_layout("main");
-        assert!(main.find("main").is_some() && main.find("sidebar").is_some());
-        assert!(main.walk().iter().any(|n| matches!(n.content(), Some(super::Content::Context { .. }))));
+        assert!(main.find("workspace").is_some() && main.find("sidebar").is_some());
+        assert!(main.find("flow-panel").is_some() && main.find("main-chat").is_some());
         let terminals = super::default_layout("terminals");
         assert!(terminals.find("tabs").is_some());
         assert!(matches!(terminals.find("main").and_then(|n| n.content()), Some(super::Content::Context { .. })));

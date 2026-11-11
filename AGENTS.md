@@ -9,6 +9,8 @@ maintains it.
 This checkout also ships **Multi Agent Herdr**, Nauagency's separately named
 desktop app. For any Windows or macOS work on that app, read
 `docs/nauagency-macos.md` before changing, building, installing or packaging it.
+The Nauagency core is bundled under `core/`; app, core, installers, and workflow
+mods are maintained and released from this one repository.
 
 - Keep Windows and macOS behavior aligned unless an OS API requires a guarded
   implementation. Document every deliberate difference.

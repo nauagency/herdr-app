@@ -27,7 +27,7 @@ done
 
 echo "package-nauagency: Multi Agent Herdr $version for $os-$arch"
 HERDR_APP_RELEASE=1 cargo build --release --locked
-core_repo=${NAU_CORE_SOURCE:-../multi-agent-herdr-core}
+core_repo=${NAU_CORE_SOURCE:-core}
 [[ -f "$core_repo/crates/herdr-core/Cargo.toml" ]] || { echo "package-nauagency: missing Multi Agent Herdr Core at $core_repo" >&2; exit 1; }
 if [[ $os == windows ]]; then
   powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$core_repo/scripts/fetch-conpty.ps1")" -Dest "$(cygpath -w "$core_repo/target/release")"

@@ -98,7 +98,7 @@ fn initial_pane_size(cx: &mut gpui::TestAppContext) {
             "header": {"height": 23, "content": {"mod": "size-probe"}}
         }}
     });
-    let main: serde_json::Value = serde_json::from_str(include_str!("../../defaults/layouts/main.json")).unwrap();
+    let main: serde_json::Value = serde_json::from_str(include_str!("../../defaults/layouts/terminals.json")).unwrap();
     let (view, cx) = open_window(cx, "size-probe", "export default () => null;", plain.clone());
     for (label, layout, steps) in [
         ("lone", plain.clone(), vec![]),
@@ -171,7 +171,7 @@ fn hidden_tabs_follow_the_window() {
 fn hidden_tabs_follow(cx: &mut gpui::TestAppContext) {
     use gpui::{px, size};
     if !running_alone("hidden_tabs_follow") { return; }
-    let main: serde_json::Value = serde_json::from_str(include_str!("../../defaults/layouts/main.json")).unwrap();
+    let main: serde_json::Value = serde_json::from_str(include_str!("../../defaults/layouts/terminals.json")).unwrap();
     let (view, cx) = open_window(cx, "size-probe", "export default () => null;", main);
     // Tab "a" has two panes side by side; tab "b" is the one shown.
     let mut root = crate::model::pane("a", "probe-a");

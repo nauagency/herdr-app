@@ -18,6 +18,9 @@ git pull --ff-only origin master
 git submodule update --init --recursive
 ```
 
+The repository is a monorepo: the Nauagency core is in `core/`. Do not clone a
+second `multi-agent-herdr-core` repository beside the app.
+
 Never discard a dirty worktree. Inspect it and preserve unrelated edits.
 
 ## 2. Native prerequisites
@@ -68,6 +71,7 @@ shell wrapper rather than attempting to run PowerShell.
 
 ```bash
 cargo test --locked -- --test-threads=1
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/test-control-plane.ps1
 bun test scripts/files.test.ts scripts/machine-add.test.ts scripts/picker.test.ts \
   scripts/palette.test.ts scripts/agents.test.ts scripts/spaces.test.ts \
   scripts/worktree.test.ts

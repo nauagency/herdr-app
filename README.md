@@ -2,6 +2,11 @@
 
 Herdr is a desktop app for terminals and coding agents. Keep work in spaces, see which agents need you, and leave terminals running when you close the window.
 
+The Nauagency distribution, **Multi Agent Herdr**, is built from this same
+monorepo. Its app, bundled core, Windows/macOS installers, and durable
+multi-agent control plane are versioned together. See
+[the control-plane guide](docs/nauagency-control-plane.md).
+
 ## Install
 
 ### Linux and macOS

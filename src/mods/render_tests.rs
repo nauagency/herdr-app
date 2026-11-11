@@ -178,6 +178,29 @@ fn module(values: BTreeMap<String, Value>, calls: Rc<RefCell<Calls>>) -> HostMod
                     Some(json!({"code":0,"stdout":"d\u{0}src\u{0}f\u{0}README.md\u{0}","stderr":""}))
                 }
                 "exec"
+                    if first == "node"
+                        && a.get(1).map(from_host).and_then(|v| v.get(0).cloned())
+                            == Some(json!("/fixture/app/mods/codex-model-picker/codex-models.mjs")) =>
+                {
+                    Some(json!({"code":0,"stdout":"[]","stderr":""}))
+                }
+                "exec"
+                    if first == "powershell.exe"
+                        && a.get(1)
+                            .map(from_host)
+                            .and_then(|v| v.as_array().cloned())
+                            .is_some_and(|args| {
+                                args.iter().any(|value| {
+                                    matches!(
+                                        value.as_str(),
+                                        Some("list" | "list-all" | "mailbox" | "recover" | "schedule" | "deliver" | "get-models")
+                                    )
+                                })
+                            }) =>
+                {
+                    Some(json!({"code":0,"stdout":"[]","stderr":""}))
+                }
+                "exec"
                     if first == "git"
                         && [
                             json!(["rev-parse", "--show-toplevel"]),
@@ -673,50 +696,21 @@ fn option_key_settings_are_only_shown_on_macos(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
-fn settings_sections_and_updates(cx: &mut TestAppContext) {
+fn standalone_settings_hide_inherited_update_controls(cx: &mut TestAppContext) {
     cx.update(gpui_shell::init);
     let start = Instant::now();
     let staged = Staged::new();
-    for section in ["look", "alerts", "privacy", "updates"] {
+    for section in ["look", "alerts", "privacy"] {
         let mut p = props();
         p["section"] = json!(section);
         describe(cx, &staged, "frame/settings", true, p, updates("current", "current"), None).unwrap();
     }
-    for app in ["source", "current", "ready"] {
-        for core in ["current", "ready", "error", "managed", "updating"] {
-            let mut p = props();
-            p["section"] = json!("updates");
-            let tree = describe(cx, &staged, "frame/settings", true, p, updates(app, core), None)
-                .unwrap_or_else(|e| panic!("updates/{app}/{core}: {e:#}"));
-            if app == "current" && core == "current" {
-                assert!(
-                    tree.contains("check-app") && tree.contains("check-core"),
-                    "both update buttons must exist: {tree}"
-                );
-            }
-        }
-    }
-    for (checking, checked, asked) in [
-        (false, None, false), (false, None, true),
-        (true, None, false), (true, None, true),
-        (true, Some(1700000000u64), false), (true, Some(1700000000), true),
-        (false, Some(1700000000), false), (false, Some(1700000000), true),
-    ] {
-        let mut p = props();
-        p["section"] = json!("updates");
-        let mut u = updates("current", "current");
-        u["checked"] = json!(checked);
-        u["checking"] = json!(checking);
-        let setup = asked.then_some("this.asked = Date.now();");
-        let tree = describe(cx, &staged, "frame/settings", true, p, u, setup).unwrap();
-        let succeeded = !checking && checked.is_some();
-        assert_eq!(tree.contains("Up to date"), succeeded, "success requires a completed, successful check: {tree}");
-        if !checking && checked.is_none() {
-            assert!(tree.contains("check-app") && tree.contains("check-core"), "failed checks must remain retryable: {tree}");
-        }
-        assert!(tree.contains(if checking { "Checking" } else if succeeded { "Up to date" } else { "Check your connection" }), "check status missing: {tree}");
-    }
-    eprintln!("27 settings cases, each twice: {:?}", start.elapsed());
+    let mut p = props();
+    p["section"] = json!("updates");
+    let tree = describe(cx, &staged, "frame/settings", true, p, updates("ready", "ready"), None).unwrap();
+    assert!(!tree.contains("st-s-updates"));
+    assert!(!tree.contains("st-app-update") && !tree.contains("st-check-core"));
+    eprintln!("standalone settings cases, each twice: {:?}", start.elapsed());
 }
 
 #[gpui::test]
@@ -779,11 +773,6 @@ fn settings_keep_notes_in_the_whats_new_window(cx: &mut TestAppContext) {
     ]);
     let mut update = updates("ready", "current");
     update["notes"] = notes.clone();
-    let mut p = props();
-    p["section"] = json!("updates");
-    let tree = describe(cx, &staged, "frame/settings", true, p, update.clone(), None).unwrap();
-    assert!(tree.contains("st-whats-new") && tree.contains("st-app-update") && tree.contains("st-check-core"));
-    assert!(!tree.contains("Newest details") && !tree.contains("Older headline"));
     let mut p = props();
     p["notes"] = notes;
     let tree = describe(cx, &staged, "frame/whatsnew", true, p, update, None).unwrap();
