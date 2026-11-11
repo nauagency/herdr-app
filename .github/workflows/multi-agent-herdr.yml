@@ -19,7 +19,6 @@ jobs:
       matrix:
         include:
           - { target: windows-x86_64, runner: windows-2022 }
-          - { target: macos-aarch64, runner: macos-15 }
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     defaults:
