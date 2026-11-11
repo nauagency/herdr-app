@@ -614,12 +614,12 @@ Options:
 ## hc update
 
 ```text
-Swap this hc for another build and restart (terminals keep running)
+Swap this hc for a local build and restart (terminals keep running)
 
 Usage: hc update [OPTIONS]
 
 Options:
-      --from <FILE>      A herdr-core binary to use (default: download the latest release)
+      --from <FILE>      A Multi Agent Herdr Core binary to use. Required; online updates are disabled
       --json             JSON output even in a terminal
       --version <X.Y.Z>  At least this release (`0.1.4`): nothing changes when this hc is already that or newer
       --force            Allow an older version (saved state only moves forward), or a release of another protocol generation
