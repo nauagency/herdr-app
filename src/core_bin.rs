@@ -261,7 +261,7 @@ mod tests {
         let legacy = home.join(".local/share/herdr-core/Herdr Core.app/Contents/MacOS");
         let dirs = usual_dirs(home);
         assert_eq!(&dirs[dirs.len() - 2..], &[dir.clone(), legacy]);
-        assert_eq!(names(&dir)[0], dir.join("herdr-core"));
+        assert_eq!(names(&dir)[0], dir.join("multi-agent-herdr-core"));
     }
 
     #[cfg(unix)]
@@ -282,7 +282,7 @@ mod tests {
         std::fs::write(&bad, "#!/bin/sh\nif [ \"$1\" = --version ]; then echo hc 0.1.18; exit; fi\nread hello\necho unusable >&2\nexit 1\n").unwrap();
         std::fs::set_permissions(&bad, std::fs::Permissions::from_mode(0o755)).unwrap();
         for replacement in ["chosen", "installed"] {
-            use_core(find(Some(bad.to_str().unwrap())).unwrap());
+            use_core(bad.clone());
             assert!(crate::hc::Core::connect().is_err());
             let good = root.join(replacement);
             let hello = serde_json::json!({"result": {"selected": replacement}});
@@ -356,6 +356,8 @@ mod tests {
         assert_eq!(version(&dir.join("hc")), None);
         let real = dir.join("herdr-core");
         assert_eq!(version(&real).as_deref(), Some("hc 0.1.1"));
-        assert_eq!(find(Some(real.to_str().unwrap())), Some(real));
+        // Standalone builds deliberately ignore configured and PATH cores;
+        // only the renamed binary shipped beside the app may be selected.
+        assert_eq!(find(Some(real.to_str().unwrap())), bundled().filter(|candidate| candidate.is_file() && version(candidate).is_some()));
     }
 }
