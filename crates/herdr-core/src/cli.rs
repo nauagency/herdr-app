@@ -22,7 +22,7 @@ use output::*;
 use update::*;
 
 #[derive(Parser)]
-#[command(name = "hc", version, about = "herdr-core: a terminal runtime for coding agents")]
+#[command(name = "hc", version, about = "Multi Agent Herdr Core: local terminal runtime for coding agents")]
 struct Cli {
     /// JSON output even in a terminal.
     #[arg(long, global = true)]
@@ -82,9 +82,9 @@ enum Cmd {
     Events(SubscribeParams),
     /// Templates you can run by name (~/.config/herdr-core/templates).
     Templates,
-    /// Swap this hc for another build and restart (terminals keep running).
+    /// Swap this hc for a local build and restart (terminals keep running).
     Update {
-        /// A herdr-core binary to use (default: download the latest release).
+        /// A Multi Agent Herdr Core binary to use. Required; online updates are disabled.
         #[arg(long, value_name = "FILE", conflicts_with = "version")]
         from: Option<std::path::PathBuf>,
         /// At least this release (`0.1.4`): nothing changes when this hc is
@@ -573,53 +573,12 @@ fn run(cmd: Option<Cmd>, json: bool, asked: bool) -> Result<Option<Out>, RpcErro
             Out { json: r, human }
         }
         Cmd::Server { action: ServerCmd::Stop } => stop(&paths)?,
-        Cmd::Update { from: None, version, force } => {
-            let this = format!("hc {}", env!("CARGO_PKG_VERSION"));
-            if let Some(v) = &version
-                && !force
-                && !older(&this, &format!("hc {v}"))
-                && !crate::platform::needs_bundle_update()
-            {
-                let human = format!("{this} is already {v} or newer");
-                return Ok(Some(up_to_date(&paths, v, human)?));
-            }
-            // Only when asked: hc never checks for updates on its own.
-            let scratch = crate::releases::Scratch::new()?;
-            let requested = version
-                .as_deref()
-                .map(|v| if !force && !older(&this, &format!("hc {v}")) { env!("CARGO_PKG_VERSION") } else { v });
-            let m = crate::releases::manifest(requested, &scratch.0)?;
-            // Apps and scripts built for this generation would break on another one.
-            if m.generation != crate::api::GENERATION && !force {
-                return Err(RpcError::new(
-                    "refused",
-                    format!(
-                        "hc {} speaks protocol generation {}, this hc {}: apps built for it would stop working",
-                        m.version,
-                        m.generation,
-                        crate::api::GENERATION
-                    ),
-                    "update the apps that use hc first, then hc update --force",
-                ));
-            }
-            if version.is_none()
-                && !force
-                && !older(&this, &format!("hc {}", m.version))
-                && !crate::platform::needs_bundle_update()
-            {
-                let human = format!("{this} is up to date (latest release: {})", m.version);
-                up_to_date(&paths, &m.version, human)?
-            } else {
-                let file = crate::releases::download(
-                    &m,
-                    &crate::releases::this_target(),
-                    &scratch.0,
-                    crate::platform::prefer_release_bundle(),
-                )?;
-                let mut out = update(&paths, &file, force)?;
-                out.json["release"] = m.version.into();
-                out
-            }
+        Cmd::Update { from: None, .. } => {
+            return Err(RpcError::new(
+                "disabled",
+                "online updates are disabled in Multi Agent Herdr Core",
+                "install a new Multi Agent Herdr package, or use hc update --from FILE",
+            ));
         }
         Cmd::Update { from: Some(from), force, .. } => update(&paths, &from, force)?,
         Cmd::Machine { action } => machine(&paths, action, call)?,

@@ -352,7 +352,7 @@ pub const MAX_SOCKET_PATH: usize = 256;
 pub fn endpoints(_state: &Path) -> (PathBuf, String) {
     let user: String =
         std::env::var("USERNAME").unwrap_or_default().chars().filter(|c| c.is_ascii_alphanumeric()).collect();
-    (PathBuf::from(r"\\.\pipe\"), format!("herdr-core-{user}-"))
+    (PathBuf::from(r"\\.\pipe\"), format!("multi-agent-herdr-core-{user}-"))
 }
 
 pub fn private_dir(path: &Path) -> io::Result<()> {

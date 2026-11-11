@@ -1,4 +1,4 @@
-//! Released builds on releases.herdr.dev: the list (`core/latest.json`, or
+//! Optional explicitly configured release source for remote-machine provisioning: the list (`core/latest.json`, or
 //! `core/<version>/manifest.json` for one version) and its checked
 //! downloads. curl, sha256sum/shasum (Windows: its own crypto) and tar do
 //! the work: no HTTP or crypto code in hc for something run this rarely.
@@ -23,14 +23,11 @@ pub struct Target {
 }
 
 fn base() -> String {
-    std::env::var("HERDR_RELEASES_URL")
-        .unwrap_or_else(|_| "https://releases.herdr.dev".into())
-        .trim_end_matches('/')
-        .into()
+    std::env::var("MULTI_AGENT_HERDR_RELEASES_URL").unwrap_or_default().trim_end_matches('/').into()
 }
 
 fn unavailable(why: String) -> RpcError {
-    RpcError::new("unavailable", why, "check your connection; the releases are at releases.herdr.dev")
+    RpcError::new("unavailable", why, "this standalone build has no default release server")
 }
 
 fn curl(url: &str, to: &Path) -> Result<(), RpcError> {

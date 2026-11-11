@@ -30,6 +30,7 @@ pub(super) fn older(a: &str, b: &str) -> bool {
 
 /// The installed binary can be current while a core started before it was
 /// replaced is still running. Do not start a core just to check its version.
+#[allow(dead_code)]
 pub(super) fn up_to_date(paths: &Paths, release: &str, human: String) -> Result<Out, RpcError> {
     let this = format!("hc {}", env!("CARGO_PKG_VERSION"));
     let mut out = Out { json: json!({"release": release, "now": this, "updated": false}), human };
