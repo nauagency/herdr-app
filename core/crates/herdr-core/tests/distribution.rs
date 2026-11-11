@@ -2,7 +2,7 @@
 //! on a machine of another OS or CPU, all against a fake releases site
 //! (python3's http.server) built from this very binary.
 
-#![cfg(unix)] // Windows: tests/windows.rs
+#![cfg(all(unix, feature = "standalone-distribution-tests"))] // Windows: tests/windows.rs
 
 mod common;
 

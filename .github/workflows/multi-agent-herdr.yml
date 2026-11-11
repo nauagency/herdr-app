@@ -42,7 +42,10 @@ jobs:
       - name: Test
         run: cargo test --locked --bins -- --test-threads=1
       - name: Test bundled core
-        run: cargo test --locked --manifest-path core/Cargo.toml
+        run: >-
+          cargo test --locked --manifest-path core/Cargo.toml
+          --lib --bins
+          --test cli_docs --test compat --test skill
       - name: Test durable control plane
         if: runner.os == 'Windows'
         shell: pwsh

@@ -9,6 +9,13 @@ publish.workspace = true
 name = "herdr-core"
 path = "src/main.rs"
 
+[features]
+default = []
+# The consolidated desktop app deliberately disables the legacy online core
+# updater. Keep its old release-distribution contract available for archive
+# and compatibility work without running those incompatible tests by default.
+standalone-distribution-tests = []
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 ghostty-vt = { path = "../ghostty-vt" }
